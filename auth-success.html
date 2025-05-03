@@ -5,6 +5,23 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Authorization Successful - Old Watches</title>
   <link rel="stylesheet" href="style.css">
+  <style>
+    .code-box {
+      background-color: #f5f5f5;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      padding: 15px;
+      margin: 20px 0;
+      overflow-wrap: break-word;
+      font-family: monospace;
+    }
+    .instruction {
+      margin: 20px 0;
+      padding: 15px;
+      background-color: #fffbd6;
+      border-left: 4px solid #ffd54f;
+    }
+  </style>
 </head>
 <body>
   <header>
@@ -15,12 +32,22 @@
   </header>
   
   <main class="container">
-    <section class="text-center">
+    <section>
       <h2>Thank You for Authorizing Old Watches</h2>
-      <p>Your eBay authorization was successful. You can close this window now.</p>
+      <p>Your eBay authorization was successful!</p>
       
-      <div id="token-info" style="margin-top: 40px;">
-        <!-- This will be populated via JavaScript if needed -->
+      <div id="token-info">
+        <div class="instruction">
+          <h3>Next Steps:</h3>
+          <p>You need to copy the authorization code below and use it to obtain an access token.</p>
+        </div>
+        
+        <h3>Your Authorization Code:</h3>
+        <div id="auth-code" class="code-box">
+          Loading...
+        </div>
+        
+        <p><strong>Important:</strong> This code is only valid for a short time. Please use it immediately to get your access token.</p>
       </div>
       
       <div style="margin-top: 40px;">
@@ -36,14 +63,15 @@
   </footer>
 
   <script>
-    // Get URL parameters (in case eBay returns any)
+    // Get URL parameters
     const urlParams = new URLSearchParams(window.location.search);
     const code = urlParams.get('code');
     
-    // If there's a code parameter, display it (for development purposes)
-    if (code && document.getElementById('token-info')) {
-      document.getElementById('token-info').innerHTML = 
-        '<p>Authorization code received. This code can be exchanged for an access token.</p>';
+    // Display the authorization code
+    if (code) {
+      document.getElementById('auth-code').textContent = code;
+    } else {
+      document.getElementById('auth-code').textContent = 'No authorization code was received. Please try again.';
     }
   </script>
 </body>
