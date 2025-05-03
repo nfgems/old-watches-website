@@ -2,7 +2,7 @@ name: Update eBay Listings
 
 on:
   schedule:
-    # Run once daily at midnight
+    # Run once daily at midnight (fixed syntax)
     - cron: '0 0 * * *'
   # Allow manual triggering
   workflow_dispatch:
@@ -21,7 +21,7 @@ jobs:
       
       - name: Install dependencies
         run: |
-          npm install axios oauth-1.0a crypto
+          npm install axios oauth-1.0a crypto xml2js
       
       - name: Fetch eBay listings
         env:
