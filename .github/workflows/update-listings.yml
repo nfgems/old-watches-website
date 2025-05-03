@@ -2,7 +2,7 @@ name: Update eBay Listings
 
 on:
   schedule:
-    # Run once daily at midnight (fixed syntax)
+    # Run once daily at midnight
     - cron: '0 0 * * *'
   # Allow manual triggering
   workflow_dispatch:
@@ -21,7 +21,7 @@ jobs:
       
       - name: Install dependencies
         run: |
-          npm install axios oauth-1.0a crypto xml2js
+          npm install axios oauth-1.0a crypto
       
       - name: Refresh eBay tokens
         env:
@@ -33,6 +33,8 @@ jobs:
             echo "Token refreshed if needed"
           else
             echo "No tokens file found. OAuth flow not yet completed."
+            echo "Please complete the OAuth flow by running the auth-start.html page and following the instructions."
+            exit 1
           fi
       
       - name: Fetch eBay listings
