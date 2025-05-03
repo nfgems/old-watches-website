@@ -8,5 +8,5 @@ const EBAY_CONFIG = {
   productionApiUrl: 'https://api.ebay.com',
   
   // Use sandbox environment (true for testing, false for production)
-  useSandbox: true
+  useSandbox: false
 };
