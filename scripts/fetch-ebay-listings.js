@@ -10,6 +10,20 @@ console.log('Starting eBay listings fetch script');
 const EBAY_APP_ID = process.env.EBAY_APP_ID;
 const EBAY_SELLER_ID = process.env.EBAY_SELLER_ID || 'honey_suckle';
 
+// Try to load OAuth tokens if available
+let oauthToken = null;
+try {
+  if (fs.existsSync('ebay-tokens.json')) {
+    const tokensData = JSON.parse(fs.readFileSync('ebay-tokens.json', 'utf8'));
+    oauthToken = tokensData.access_token;
+    console.log('OAuth token loaded successfully');
+  } else {
+    console.log('No OAuth tokens file found, falling back to App ID authentication');
+  }
+} catch (error) {
+  console.error('Error loading OAuth tokens:', error.message);
+}
+
 console.log(`Using seller ID: ${EBAY_SELLER_ID}`);
 
 // eBay API endpoints
@@ -44,17 +58,28 @@ async function fetchSellerListingsWithRetry(maxRetries = 3, initialDelay = 5000)
         <outputSelector>SellerInfo</outputSelector>
       </findItemsAdvancedRequest>`;
       
+      // Set up headers
+      const headers = {
+        'Content-Type': 'text/xml',
+        'X-EBAY-SOA-OPERATION-NAME': 'findItemsAdvanced',
+        'X-EBAY-SOA-GLOBAL-ID': 'EBAY-US',
+        'X-EBAY-SOA-REQUEST-DATA-FORMAT': 'XML',
+        'X-EBAY-SOA-RESPONSE-DATA-FORMAT': 'XML'
+      };
+      
+      // Use OAuth token if available, otherwise fall back to App ID
+      if (oauthToken) {
+        headers['Authorization'] = `Bearer ${oauthToken}`;
+        console.log('Using OAuth authentication');
+      } else {
+        headers['X-EBAY-SOA-SECURITY-APPNAME'] = EBAY_APP_ID;
+        console.log('Using App ID authentication');
+      }
+      
       const response = await axios({
         method: 'post',
         url: FINDING_API_URL,
-        headers: {
-          'Content-Type': 'text/xml',
-          'X-EBAY-SOA-SECURITY-APPNAME': EBAY_APP_ID,
-          'X-EBAY-SOA-OPERATION-NAME': 'findItemsAdvanced',
-          'X-EBAY-SOA-GLOBAL-ID': 'EBAY-US',
-          'X-EBAY-SOA-REQUEST-DATA-FORMAT': 'XML',
-          'X-EBAY-SOA-RESPONSE-DATA-FORMAT': 'XML'
-        },
+        headers: headers,
         data: xmlPayload
       });
       
@@ -80,16 +105,28 @@ async function fetchSellerListingsWithRetry(maxRetries = 3, initialDelay = 5000)
           console.error('Response data:', JSON.stringify(error.response.data, null, 2));
         }
         
-        // Check if error is related to rate limiting
+        // Check if error is related to rate limiting or authentication
         const isRateLimit = 
           error.response.status === 500 || 
           error.response.status === 429 || 
           (error.response.data && error.response.data.includes && error.response.data.includes('RateLimiter'));
         
+        const isAuthError = 
+          error.response.status === 401 || 
+          error.response.status === 403 ||
+          (error.response.data && error.response.data.includes && error.response.data.includes('Auth'));
+        
         if (isRateLimit && retries < maxRetries) {
           console.log(`Rate limit hit. Waiting ${backoffDelay/1000} seconds before retry...`);
           await delay(backoffDelay);
           backoffDelay *= 2; // Exponential backoff
+          retries++;
+          continue;
+        }
+        
+        if (isAuthError && oauthToken) {
+          console.log('Authentication error. OAuth token may be expired. Falling back to App ID authentication.');
+          oauthToken = null; // Reset OAuth token to fall back to App ID auth
           retries++;
           continue;
         }
@@ -117,18 +154,31 @@ async function fetchFullItemDetails(itemIds) {
     const batchPromises = batch.map(async (itemId) => {
       try {
         console.log(`Fetching details for item ${itemId}`);
+        
+        // Set up params and headers
+        const params = {
+          callname: 'GetSingleItem',
+          responseencoding: 'JSON',
+          siteid: 0,
+          version: 967,
+          ItemID: itemId,
+          IncludeSelector: 'Description,ItemSpecifics'
+        };
+        
+        const headers = {};
+        
+        // Use OAuth token if available, otherwise use App ID in params
+        if (oauthToken) {
+          headers['Authorization'] = `Bearer ${oauthToken}`;
+        } else {
+          params.appid = EBAY_APP_ID;
+        }
+        
         const response = await axios({
           method: 'get',
           url: SHOPPING_API_URL,
-          params: {
-            callname: 'GetSingleItem',
-            responseencoding: 'JSON',
-            appid: EBAY_APP_ID,
-            siteid: 0,
-            version: 967,
-            ItemID: itemId,
-            IncludeSelector: 'Description,ItemSpecifics'
-          }
+          params: params,
+          headers: headers
         });
         
         return response.data;
