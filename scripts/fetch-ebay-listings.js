@@ -1,7 +1,6 @@
 // scripts/fetch-ebay-listings.js
 const axios = require('axios');
 const fs = require('fs');
-const { parseString } = require('xml2js');
 
 // Add detailed logging for debugging
 console.log('Starting eBay listings fetch script');
@@ -26,9 +25,8 @@ try {
 
 console.log(`Using seller ID: ${EBAY_SELLER_ID}`);
 
-// eBay API endpoints
-const FINDING_API_URL = 'https://svcs.ebay.com/services/search/FindingService/v1';
-const SHOPPING_API_URL = 'https://open.api.ebay.com/shopping';
+// eBay API endpoints - using Browse API instead of Finding API
+const BROWSE_API_URL = 'https://api.ebay.com/buy/browse/v1';
 
 // Helper function to delay execution (for rate limiting)
 const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
@@ -42,117 +40,51 @@ async function fetchSellerListingsWithRetry(maxRetries = 3, initialDelay = 5000)
     try {
       console.log(`Fetching listings for seller: ${EBAY_SELLER_ID} (Attempt ${retries + 1}/${maxRetries + 1})`);
       
-      // Use the Finding API with findItemsAdvanced operation
-      const xmlPayload = `<?xml version="1.0" encoding="utf-8"?>
-      <findItemsAdvancedRequest xmlns="http://www.ebay.com/marketplace/search/v1/services">
-        <itemFilter>
-          <name>Seller</name>
-          <value>${EBAY_SELLER_ID}</value>
-        </itemFilter>
-        <paginationInput>
-          <entriesPerPage>100</entriesPerPage>
-          <pageNumber>1</pageNumber>
-        </paginationInput>
-        <sortOrder>StartTimeNewest</sortOrder>
-        <outputSelector>PictureURLLarge</outputSelector>
-        <outputSelector>SellerInfo</outputSelector>
-      </findItemsAdvancedRequest>`;
-      
-      // Set up headers - ALWAYS include the App ID regardless of OAuth usage
-      const headers = {
-        'Content-Type': 'text/xml',
-        'X-EBAY-SOA-OPERATION-NAME': 'findItemsAdvanced',
-        'X-EBAY-SOA-GLOBAL-ID': 'EBAY-US',
-        'X-EBAY-SOA-REQUEST-DATA-FORMAT': 'XML',
-        'X-EBAY-SOA-RESPONSE-DATA-FORMAT': 'XML',
-        'X-EBAY-SOA-SECURITY-APPNAME': EBAY_APP_ID // Always include App ID
-      };
-      
-      // Add OAuth token if available
-      if (oauthToken) {
-        headers['Authorization'] = `Bearer ${oauthToken}`;
-        console.log('Using OAuth authentication with App ID');
-      } else {
-        console.log('Using App ID authentication only');
+      // Use the Browse API search endpoint
+      // Note: The Browse API requires OAuth token for authentication
+      if (!oauthToken) {
+        console.error('OAuth token is required for Browse API. Please complete the OAuth flow.');
+        return createMockData();
       }
+      
+      // Set up headers with OAuth token
+      const headers = {
+        'Authorization': `Bearer ${oauthToken}`,
+        'X-EBAY-C-MARKETPLACE-ID': 'EBAY_US',
+        'Content-Type': 'application/json'
+      };
       
       // Log the headers being sent (excluding any sensitive info)
       const logHeaders = {...headers};
       if (logHeaders['Authorization']) {
         logHeaders['Authorization'] = 'Bearer [REDACTED]';
       }
-      if (logHeaders['X-EBAY-SOA-SECURITY-APPNAME']) {
-        logHeaders['X-EBAY-SOA-SECURITY-APPNAME'] = '[REDACTED]';
-      }
       console.log('Request headers:', JSON.stringify(logHeaders, null, 2));
       
+      // Use seller filter to get only listings from the specific seller
+      const queryParams = {
+        q: `seller:${EBAY_SELLER_ID}`,
+        limit: 50, // Adjust as needed
+        filter: 'conditionIds:{1000|1500|2000|2500|3000|4000|5000|6000|7000}',
+        fieldgroups: 'FULL'  // Get complete item details
+      };
+      
+      // Log the query parameters
+      console.log('Query parameters:', JSON.stringify(queryParams, null, 2));
+      
+      // Make the API request
       const response = await axios({
-        method: 'post',
-        url: FINDING_API_URL,
+        method: 'get',
+        url: `${BROWSE_API_URL}/item_summary/search`,
         headers: headers,
-        data: xmlPayload
+        params: queryParams
       });
       
-      console.log('Successfully received Finding API response');
+      console.log('Successfully received Browse API response');
       
-      // Check for error messages in the XML response
-      if (response.data && typeof response.data === 'string' && 
-          (response.data.includes('<errorMessage') || response.data.includes('<Errors>'))) {
-        console.error('API returned an error in XML format:', response.data.substring(0, 500) + '...');
-        
-        // Parse the error to see if it's an auth issue
-        return new Promise((resolve, reject) => {
-          parseString(response.data, (err, result) => {
-            if (err) {
-              console.error('Error parsing XML error response:', err);
-              reject(new Error('Failed to parse error response'));
-            } else {
-              if (result.errorMessage && result.errorMessage.error) {
-                const errorDetail = result.errorMessage.error[0];
-                console.error('API Error:', JSON.stringify(errorDetail, null, 2));
-                
-                // Check if it's an auth error and retry with different auth method
-                if (errorDetail.domain && errorDetail.domain[0] === 'Security' && oauthToken) {
-                  console.log('Authentication error detected. Will retry with App ID only.');
-                  oauthToken = null;
-                  retries++;
-                  throw new Error('Authentication error, retrying with App ID only');
-                } else {
-                  reject(new Error(`API Error: ${errorDetail.message[0]}`));
-                }
-              } else {
-                reject(new Error('Unknown API error'));
-              }
-            }
-          });
-        });
-      }
+      // Process the JSON response
+      return processBrowseApiResponse(response.data);
       
-      // Process XML response
-      return new Promise((resolve, reject) => {
-        parseString(response.data, (err, result) => {
-          if (err) {
-            console.error('Error parsing XML response:', err);
-            reject(err);
-          } else {
-            // Check if the response contains an error message
-            if (result.errorMessage || 
-               (result.findItemsAdvancedResponse && 
-                result.findItemsAdvancedResponse[0] && 
-                result.findItemsAdvancedResponse[0].errors)) {
-              
-              const errorMsg = result.errorMessage ? 
-                JSON.stringify(result.errorMessage) : 
-                JSON.stringify(result.findItemsAdvancedResponse[0].errors);
-              
-              console.error('API returned an error:', errorMsg);
-              reject(new Error(`API Error: ${errorMsg}`));
-            } else {
-              resolve(processFindingApiResponse(result));
-            }
-          }
-        });
-      });
     } catch (error) {
       console.error(`Error fetching seller listings (Attempt ${retries + 1}/${maxRetries + 1}):`, error.message);
       if (error.response) {
@@ -168,7 +100,6 @@ async function fetchSellerListingsWithRetry(maxRetries = 3, initialDelay = 5000)
         
         // Check if error is related to rate limiting or authentication
         const isRateLimit = 
-          error.response.status === 500 || 
           error.response.status === 429 || 
           (error.response.data && typeof error.response.data === 'string' && 
            error.response.data.includes('RateLimiter'));
@@ -189,10 +120,12 @@ async function fetchSellerListingsWithRetry(maxRetries = 3, initialDelay = 5000)
           continue;
         }
         
-        if (isAuthError && oauthToken) {
-          console.log('Authentication error. OAuth token may be expired or insufficient. Falling back to App ID authentication only.');
-          oauthToken = null; // Reset OAuth token to fall back to App ID auth
+        if (isAuthError && retries < maxRetries) {
+          console.log('Authentication error. OAuth token may be expired. Try refreshing the token.');
+          // Don't reset OAuth token here as Browse API requires OAuth
           retries++;
+          await delay(backoffDelay);
+          backoffDelay *= 2;
           continue;
         }
       }
@@ -216,7 +149,7 @@ async function fetchSellerListingsWithRetry(maxRetries = 3, initialDelay = 5000)
   return createMockData();
 }
 
-// Function to fetch full item details including description
+// Function to fetch full item details using Browse API
 async function fetchFullItemDetails(itemIds) {
   console.log(`Fetching full details for ${itemIds.length} items`);
   
@@ -232,28 +165,16 @@ async function fetchFullItemDetails(itemIds) {
       try {
         console.log(`Fetching details for item ${itemId}`);
         
-        // Set up params and headers
-        const params = {
-          callname: 'GetSingleItem',
-          responseencoding: 'JSON',
-          siteid: 0,
-          version: 967,
-          ItemID: itemId,
-          IncludeSelector: 'Description,ItemSpecifics',
-          appid: EBAY_APP_ID // Always include App ID in params
+        // Set up headers with OAuth token
+        const headers = {
+          'Authorization': `Bearer ${oauthToken}`,
+          'X-EBAY-C-MARKETPLACE-ID': 'EBAY_US'
         };
         
-        const headers = {};
-        
-        // Add OAuth token if available
-        if (oauthToken) {
-          headers['Authorization'] = `Bearer ${oauthToken}`;
-        }
-        
+        // Make the request to get item details
         const response = await axios({
           method: 'get',
-          url: SHOPPING_API_URL,
-          params: params,
+          url: `${BROWSE_API_URL}/item/${itemId}`,
           headers: headers
         });
         
@@ -283,115 +204,113 @@ async function fetchFullItemDetails(itemIds) {
   return itemDetails;
 }
 
-// Function to process Finding API response
-async function processFindingApiResponse(xmlResult) {
+// Function to process Browse API response
+async function processBrowseApiResponse(apiResponse) {
   try {
     // Check if we have items
-    const response = xmlResult.findItemsAdvancedResponse;
-    
-    if (!response || !response[0] || !response[0].searchResult || !response[0].searchResult[0] || 
-        !response[0].searchResult[0].item || response[0].searchResult[0].item.length === 0) {
-      console.log('No items found in Finding API response');
+    if (!apiResponse || !apiResponse.itemSummaries || apiResponse.itemSummaries.length === 0) {
+      console.log('No items found in Browse API response');
       return { itemSummaries: [] };
     }
     
-    const items = response[0].searchResult[0].item;
+    const items = apiResponse.itemSummaries;
     console.log(`Found ${items.length} items from seller`);
     
     // Extract item IDs for fetching full details
-    const itemIds = items.map(item => item.itemId[0]);
+    const itemIds = items.map(item => item.itemId);
     
-    // Fetch full item details including descriptions
+    // Fetch full item details - this is optional as the Browse API's search 
+    // with fieldgroups=FULL already returns most details we need
     const fullDetails = await fetchFullItemDetails(itemIds);
     console.log(`Fetched full details for ${fullDetails.length} items`);
     
     // Create lookup map for full details
     const detailsMap = {};
     fullDetails.forEach(detail => {
-      if (detail && detail.Item) {
-        detailsMap[detail.Item.ItemID] = detail.Item;
+      if (detail && detail.itemId) {
+        detailsMap[detail.itemId] = detail;
       }
     });
     
+    // Process items to match the old response format expected by app.js
     const processedItems = items.map(item => {
       try {
         // Get item ID
-        const itemId = item.itemId[0];
+        const itemId = item.itemId;
         
         // Get full details if available
         const fullDetail = detailsMap[itemId];
         
         // Extract image URL
         let imageUrl = 'https://placehold.co/600x400/gold/white?text=No+Image';
-        if (item.galleryURL && item.galleryURL[0]) {
-          imageUrl = item.galleryURL[0];
+        if (item.image && item.image.imageUrl) {
+          imageUrl = item.image.imageUrl;
         }
-        // Try to use larger image if available
-        if (item.pictureURLLarge && item.pictureURLLarge[0]) {
-          imageUrl = item.pictureURLLarge[0];
+        // Try to use larger image if available in full details
+        if (fullDetail && fullDetail.image && fullDetail.image.imageUrl) {
+          imageUrl = fullDetail.image.imageUrl;
         }
         
         // Extract price
         let price = { value: 'N/A', currency: 'USD' };
-        if (item.sellingStatus && item.sellingStatus[0] && item.sellingStatus[0].currentPrice && 
-            item.sellingStatus[0].currentPrice[0]) {
+        if (item.price) {
           price = {
-            value: item.sellingStatus[0].currentPrice[0]._,
-            currency: item.sellingStatus[0].currentPrice[0].$.currencyId
+            value: item.price.value,
+            currency: item.price.currency
           };
         }
         
-        // Create specifics array
+        // Create specifics array from item aspects
         const specifics = [];
         
         // Add condition if available
-        if (item.condition && item.condition[0] && item.condition[0].conditionDisplayName) {
+        if (item.condition) {
           specifics.push({
             name: 'Condition',
-            value: item.condition[0].conditionDisplayName[0]
+            value: item.condition
           });
         }
         
         // Add category if available
-        if (item.primaryCategory && item.primaryCategory[0] && item.primaryCategory[0].categoryName) {
+        if (item.categories && item.categories.length > 0) {
           specifics.push({
             name: 'Category',
-            value: item.primaryCategory[0].categoryName[0]
+            value: item.categories[0].categoryName
           });
         }
         
         // Add item specifics from full details if available
-        if (fullDetail && fullDetail.ItemSpecifics && fullDetail.ItemSpecifics.NameValueList) {
-          fullDetail.ItemSpecifics.NameValueList.forEach(spec => {
+        if (fullDetail && fullDetail.localizedAspects) {
+          fullDetail.localizedAspects.forEach(aspect => {
             specifics.push({
-              name: spec.Name,
-              value: Array.isArray(spec.Value) ? spec.Value.join(', ') : spec.Value
+              name: aspect.name,
+              value: aspect.value
             });
           });
         }
         
-        // Get description from full details
+        // Get description from full details or create a short description
         let fullDescription = '';
-        if (fullDetail && fullDetail.Description) {
-          fullDescription = fullDetail.Description;
-        }
-        
-        // Create short description from subtitle or item specifics if available
         let shortDescription = '';
-        if (item.subtitle && item.subtitle[0]) {
-          shortDescription = item.subtitle[0];
-        } else if (fullDescription) {
-          // Create a plain text version of the HTML description
+        
+        if (fullDetail && fullDetail.description) {
+          fullDescription = fullDetail.description;
+          // Create a plain text version of the HTML description for short description
           const textDesc = fullDescription.replace(/<[^>]*>/g, '');
           shortDescription = textDesc.substring(0, 200) + (textDesc.length > 200 ? '...' : '');
+        } else if (item.shortDescription) {
+          shortDescription = item.shortDescription;
+        } else if (item.title) {
+          // If no description is available, use the title as a fallback
+          shortDescription = `${item.title}. ${item.condition || ''}`;
         }
         
         return {
           itemId,
-          title: item.title[0],
+          title: item.title,
           image: { imageUrl },
           price,
-          itemWebUrl: item.viewItemURL[0],
+          itemWebUrl: item.itemWebUrl || `https://www.ebay.com/itm/${itemId}`,
           shortDescription,
           fullDescription,
           specifics
@@ -404,7 +323,7 @@ async function processFindingApiResponse(xmlResult) {
     
     return { itemSummaries: processedItems };
   } catch (error) {
-    console.error('Error processing Finding API results:', error);
+    console.error('Error processing Browse API results:', error);
     throw error;
   }
 }
