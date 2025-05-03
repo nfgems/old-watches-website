@@ -1,1 +1,42 @@
-{"itemSummaries":[]}
+json{
+  "itemSummaries": [
+    {
+      "itemId": "123456789",
+      "title": "Vintage Omega Seamaster Automatic Watch - 1960s",
+      "image": {
+        "imageUrl": "https://placehold.co/600x400/gold/white?text=Omega+Watch"
+      },
+      "price": {
+        "value": "899.99",
+        "currency": "USD"
+      },
+      "itemWebUrl": "https://www.ebay.com/itm/123456789",
+      "shortDescription": "Beautiful Omega Seamaster from the 1960s in excellent condition. Automatic movement.",
+      "specifics": [
+        { "name": "Brand", "value": "Omega" },
+        { "name": "Model", "value": "Seamaster" },
+        { "name": "Year", "value": "1960s" },
+        { "name": "Movement", "value": "Automatic" }
+      ]
+    },
+    {
+      "itemId": "987654321",
+      "title": "Rare Vintage Rolex Datejust - 1970s Stainless Steel",
+      "image": {
+        "imageUrl": "https://placehold.co/600x400/silver/white?text=Rolex+Watch"
+      },
+      "price": {
+        "value": "2499.99",
+        "currency": "USD"
+      },
+      "itemWebUrl": "https://www.ebay.com/itm/987654321",
+      "shortDescription": "Rare Rolex Datejust from the 1970s in great condition. Original bracelet.",
+      "specifics": [
+        { "name": "Brand", "value": "Rolex" },
+        { "name": "Model", "value": "Datejust" },
+        { "name": "Year", "value": "1970s" },
+        { "name": "Material", "value": "Stainless Steel" }
+      ]
+    }
+  ]
+}
