@@ -15,10 +15,10 @@ const USE_SANDBOX = false;
 console.log(`Using seller ID: ${EBAY_SELLER_ID}`);
 console.log(`Using sandbox: ${USE_SANDBOX}`);
 
-// eBay API endpoints - Using the Browse API instead of Finding API
-const BROWSE_API_URL = USE_SANDBOX
-  ? 'https://api.sandbox.ebay.com/buy/browse/v1/item_summary/search'
-  : 'https://api.ebay.com/buy/browse/v1/item_summary/search';
+// eBay API endpoints - Using the Trading API
+const TRADING_API_URL = USE_SANDBOX
+  ? 'https://api.sandbox.ebay.com/ws/api.dll'
+  : 'https://api.ebay.com/ws/api.dll';
 
 // Helper function to delay execution (for rate limiting)
 const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
@@ -32,26 +32,48 @@ async function fetchSellerListingsWithRetry(maxRetries = 3, initialDelay = 5000)
     try {
       console.log(`Fetching listings for seller: ${EBAY_SELLER_ID} (Attempt ${retries + 1}/${maxRetries + 1})`);
       
-      // Use the Browse API to search for items from a specific seller
+      // Use the Trading API with GetSellerList operation
+      const xmlPayload = `<?xml version="1.0" encoding="utf-8"?>
+      <GetSellerListRequest xmlns="urn:ebay:apis:eBLBaseComponents">
+        <RequesterCredentials>
+          <eBayAuthToken>${EBAY_USER_TOKEN}</eBayAuthToken>
+        </RequesterCredentials>
+        <DetailLevel>ReturnAll</DetailLevel>
+        <IncludeWatchCount>true</IncludeWatchCount>
+        <Pagination>
+          <EntriesPerPage>100</EntriesPerPage>
+          <PageNumber>1</PageNumber>
+        </Pagination>
+        <StartTimeFrom>2010-01-01T00:00:00.000Z</StartTimeFrom>
+        <StartTimeTo>2050-01-01T00:00:00.000Z</StartTimeTo>
+      </GetSellerListRequest>`;
+      
       const response = await axios({
-        method: 'get',
-        url: BROWSE_API_URL,
+        method: 'post',
+        url: TRADING_API_URL,
         headers: {
-          'Authorization': `Bearer ${EBAY_USER_TOKEN}`,
-          'X-EBAY-C-MARKETPLACE-ID': 'EBAY_US',
-          'Content-Type': 'application/json'
+          'Content-Type': 'text/xml',
+          'X-EBAY-API-COMPATIBILITY-LEVEL': '1155',
+          'X-EBAY-API-CALL-NAME': 'GetSellerList',
+          'X-EBAY-API-SITEID': '0', // US site
+          'X-EBAY-API-APP-NAME': EBAY_APP_ID
         },
-        params: {
-          q: '',
-          filter: `sellers:{${EBAY_SELLER_ID}}`,
-          limit: 50
-        }
+        data: xmlPayload
       });
       
-      console.log('Successfully received Browse API response');
+      console.log('Successfully received Trading API response');
       
-      // Process JSON response
-      return processApiResponse(response.data);
+      // Process XML response
+      return new Promise((resolve, reject) => {
+        parseString(response.data, (err, result) => {
+          if (err) {
+            console.error('Error parsing XML response:', err);
+            reject(err);
+          } else {
+            resolve(processTradingApiResponse(result));
+          }
+        });
+      });
     } catch (error) {
       console.error(`Error fetching seller listings (Attempt ${retries + 1}/${maxRetries + 1}):`, error.message);
       if (error.response) {
@@ -83,65 +105,80 @@ async function fetchSellerListingsWithRetry(maxRetries = 3, initialDelay = 5000)
   }
 }
 
-// Function to process Browse API response
-function processApiResponse(apiResponse) {
+// Function to process Trading API response
+function processTradingApiResponse(xmlResult) {
   try {
-    console.log(`Found ${apiResponse.itemSummaries?.length || 0} items from seller`);
+    const sellerList = xmlResult.GetSellerListResponse;
     
-    if (!apiResponse.itemSummaries || apiResponse.itemSummaries.length === 0) {
-      console.log('No items found in response');
+    if (!sellerList || !sellerList.ItemArray || !sellerList.ItemArray[0] || !sellerList.ItemArray[0].Item) {
+      console.log('No items found in Trading API response');
       return { itemSummaries: [] };
     }
     
-    // Process items to match the format expected by the frontend
-    const processedItems = apiResponse.itemSummaries.map(item => {
-      // Extract image URL
-      let imageUrl = 'https://placehold.co/600x400/gold/white?text=No+Image';
-      if (item.image && item.image.imageUrl) {
-        imageUrl = item.image.imageUrl;
+    const items = sellerList.ItemArray[0].Item;
+    console.log(`Found ${items.length} items from seller`);
+    
+    const processedItems = items.map(item => {
+      try {
+        // Extract image URL
+        let imageUrl = 'https://placehold.co/600x400/gold/white?text=No+Image';
+        if (item.PictureDetails && item.PictureDetails[0] && item.PictureDetails[0].PictureURL && item.PictureDetails[0].PictureURL.length > 0) {
+          imageUrl = item.PictureDetails[0].PictureURL[0];
+        }
+        
+        // Extract price
+        let price = { value: 'N/A', currency: 'USD' };
+        if (item.SellingStatus && item.SellingStatus[0] && item.SellingStatus[0].CurrentPrice && item.SellingStatus[0].CurrentPrice.length > 0) {
+          price = {
+            value: item.SellingStatus[0].CurrentPrice[0]._ || 'N/A',
+            currency: item.SellingStatus[0].CurrentPrice[0].$ ? item.SellingStatus[0].CurrentPrice[0].$.currencyID : 'USD'
+          };
+        }
+        
+        // Create specifics array
+        const specifics = [];
+        
+        // Add condition if available
+        if (item.ConditionDisplayName && item.ConditionDisplayName.length > 0) {
+          specifics.push({
+            name: 'Condition',
+            value: item.ConditionDisplayName[0]
+          });
+        }
+        
+        // Add other available details like brand if available in item specifics
+        if (item.ItemSpecifics && item.ItemSpecifics[0] && item.ItemSpecifics[0].NameValueList) {
+          item.ItemSpecifics[0].NameValueList.forEach(spec => {
+            if (spec.Name && spec.Name.length > 0 && spec.Value && spec.Value.length > 0) {
+              specifics.push({
+                name: spec.Name[0],
+                value: spec.Value[0]
+              });
+            }
+          });
+        }
+        
+        // Create URL from item ID
+        const itemWebUrl = `https://www.ebay.com/itm/${item.ItemID[0]}`;
+        
+        return {
+          itemId: item.ItemID[0],
+          title: item.Title[0],
+          image: { imageUrl },
+          price,
+          itemWebUrl,
+          shortDescription: item.Description ? item.Description[0].substring(0, 200) : '',
+          specifics
+        };
+      } catch (itemError) {
+        console.error('Error processing item:', itemError);
+        return null;
       }
-      
-      // Create specifics array
-      const specifics = [];
-      
-      // Add condition if available
-      if (item.condition) {
-        specifics.push({
-          name: 'Condition',
-          value: item.condition
-        });
-      }
-      
-      // Add other available details
-      if (item.brand) {
-        specifics.push({
-          name: 'Brand',
-          value: item.brand
-        });
-      }
-      
-      if (item.itemGroupType) {
-        specifics.push({
-          name: 'Type',
-          value: item.itemGroupType
-        });
-      }
-      
-      // Make sure all required fields for the frontend are present
-      return {
-        itemId: item.itemId,
-        title: item.title,
-        image: { imageUrl },
-        price: item.price || { value: 'N/A', currency: 'USD' },
-        itemWebUrl: item.itemWebUrl,
-        shortDescription: item.shortDescription || item.subtitle || '',
-        specifics
-      };
-    });
+    }).filter(item => item !== null);
     
     return { itemSummaries: processedItems };
   } catch (error) {
-    console.error('Error processing API results:', error);
+    console.error('Error processing Trading API results:', error);
     throw error;
   }
 }
@@ -170,8 +207,44 @@ function createMockData() {
           { name: 'Movement', value: 'Automatic' }
         ]
       },
-      // Keep your existing mock data items
-      // ...other mock items...
+      {
+        itemId: '987654321',
+        title: 'Rolex Datejust 36mm Stainless Steel - Box and Papers',
+        image: {
+          imageUrl: 'https://i.ebayimg.com/images/g/13cAAOSwD2NjmO2I/s-l1600.jpg'
+        },
+        price: {
+          value: '5899.99',
+          currency: 'USD'
+        },
+        itemWebUrl: 'https://www.ebay.com/itm/987654321',
+        shortDescription: 'Authentic Rolex Datejust with complete box and papers. Excellent condition.',
+        specifics: [
+          { name: 'Brand', value: 'Rolex' },
+          { name: 'Model', value: 'Datejust' },
+          { name: 'Size', value: '36mm' },
+          { name: 'Condition', value: 'Used - Very Good' }
+        ]
+      },
+      {
+        itemId: '564738291',
+        title: 'Vintage Seiko 6139 Chronograph - Pogue - All Original',
+        image: {
+          imageUrl: 'https://i.ebayimg.com/images/g/CswAAOSwpHtgEV5w/s-l1600.jpg'
+        },
+        price: {
+          value: '1299.99',
+          currency: 'USD'
+        },
+        itemWebUrl: 'https://www.ebay.com/itm/564738291',
+        shortDescription: 'Rare Seiko 6139 \"Pogue\" chronograph in all original condition. Sought-after collector piece.',
+        specifics: [
+          { name: 'Brand', value: 'Seiko' },
+          { name: 'Model', value: '6139 Chronograph' },
+          { name: 'Year', value: '1970s' },
+          { name: 'Condition', value: 'Vintage - Good' }
+        ]
+      }
     ]
   };
 }
