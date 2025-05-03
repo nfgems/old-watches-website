@@ -23,6 +23,18 @@ jobs:
         run: |
           npm install axios oauth-1.0a crypto xml2js
       
+      - name: Refresh eBay tokens
+        env:
+          EBAY_APP_ID: ${{ secrets.EBAY_APP_ID }}
+          EBAY_CERT_ID: ${{ secrets.EBAY_CERT_ID }}
+        run: |
+          if [ -f "ebay-tokens.json" ]; then
+            node scripts/refresh-token.js
+            echo "Token refreshed if needed"
+          else
+            echo "No tokens file found. OAuth flow not yet completed."
+          fi
+      
       - name: Fetch eBay listings
         env:
           EBAY_APP_ID: ${{ secrets.EBAY_APP_ID }}
@@ -35,4 +47,5 @@ jobs:
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
           git add listings.json
+          git add ebay-tokens.json || true
           git diff --quiet && git diff --staged --quiet || (git commit -m "Update eBay listings" && git push)
