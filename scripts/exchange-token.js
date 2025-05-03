@@ -14,16 +14,9 @@ async function exchangeCodeForToken() {
   try {
     console.log('Exchanging authorization code for tokens...');
     
-    // Define the scopes needed for the Browse API
-    const scopes = [
-      'https://api.ebay.com/oauth/api_scope',
-      'https://api.ebay.com/oauth/api_scope/buy.item.feed',
-      'https://api.ebay.com/oauth/api_scope/buy.marketing',
-      'https://api.ebay.com/oauth/api_scope/buy.product.feed',
-      'https://api.ebay.com/oauth/api_scope/buy.marketplace.insights'
-    ].join(' ');
-    
     // Prepare the request to exchange the code for tokens
+    // NOTE: We don't need to specify scopes again here because they are 
+    // already included in the authorization code from the auth-start page
     const response = await axios({
       method: 'post',
       url: 'https://api.ebay.com/identity/v1/oauth2/token',
@@ -31,7 +24,7 @@ async function exchangeCodeForToken() {
         'Content-Type': 'application/x-www-form-urlencoded',
         'Authorization': 'Basic ' + Buffer.from(`${CLIENT_ID}:${CLIENT_SECRET}`).toString('base64')
       },
-      data: `grant_type=authorization_code&code=${authCode}&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&scope=${encodeURIComponent(scopes)}`
+      data: `grant_type=authorization_code&code=${authCode}&redirect_uri=${encodeURIComponent(REDIRECT_URI)}`
     });
     
     const tokenData = response.data;
