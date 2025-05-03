@@ -25,8 +25,9 @@ try {
 
 console.log(`Using seller ID: ${EBAY_SELLER_ID}`);
 
-// eBay API endpoints - using Browse API instead of Finding API
+// eBay API endpoints
 const BROWSE_API_URL = 'https://api.ebay.com/buy/browse/v1';
+const FINDING_API_URL = 'https://svcs.ebay.com/services/search/FindingService/v1';
 
 // Helper function to delay execution (for rate limiting)
 const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
@@ -41,7 +42,6 @@ async function fetchSellerListingsWithRetry(maxRetries = 3, initialDelay = 5000)
       console.log(`Fetching listings for seller: ${EBAY_SELLER_ID} (Attempt ${retries + 1}/${maxRetries + 1})`);
       
       // Use the Browse API search endpoint
-      // Note: The Browse API requires OAuth token for authentication
       if (!oauthToken) {
         console.error('OAuth token is required for Browse API. Please complete the OAuth flow.');
         return createMockData();
@@ -61,13 +61,13 @@ async function fetchSellerListingsWithRetry(maxRetries = 3, initialDelay = 5000)
       }
       console.log('Request headers:', JSON.stringify(logHeaders, null, 2));
       
-      // FIXED: Use proper seller filter syntax
-      // The Browse API expects filter parameters in a specific format
+      // IMPORTANT FIX: Browse API requires at least one of 'q', 'category_ids', 'charity_ids', 'epid', or 'gtin'
+      // We'll use a broad query and then filter by seller
       const queryParams = {
-        limit: 50, // Adjust as needed
-        // Use proper filter syntax for seller
+        limit: 50,
+        q: 'watch', // Adding a query parameter is required
         filter: `sellers:{${EBAY_SELLER_ID}}`,
-        fieldgroups: 'FULL'  // Get complete item details
+        fieldgroups: 'FULL'
       };
       
       // Log the query parameters
@@ -149,9 +149,6 @@ async function fetchSellerListingsWithRetry(maxRetries = 3, initialDelay = 5000)
   console.log('Falling back to mock data due to unexpected exit from retry loop');
   return createMockData();
 }
-
-// Rest of the file remains the same...
-// (including the functions fetchFullItemDetails, processBrowseApiResponse, createMockData, and main)
 
 // Function to fetch full item details using Browse API
 async function fetchFullItemDetails(itemIds) {
