@@ -9,16 +9,12 @@ console.log('Starting eBay listings fetch script');
 // eBay API configuration
 const EBAY_APP_ID = process.env.EBAY_APP_ID;
 const EBAY_SELLER_ID = process.env.EBAY_SELLER_ID || 'honey_suckle';
-const EBAY_USER_TOKEN = 'v^1.1#i^1#r^1#f^0#p^3#I^3#t^Ul4xMF8xMDpGOERCMTI0MkQwNUI5QjExRUJFNEEwNUU0RDZFODcyN18xXzEjRV4yNjA=';
-const USE_SANDBOX = false;
 
 console.log(`Using seller ID: ${EBAY_SELLER_ID}`);
-console.log(`Using sandbox: ${USE_SANDBOX}`);
 
-// eBay API endpoints - Using the Trading API
-const TRADING_API_URL = USE_SANDBOX
-  ? 'https://api.sandbox.ebay.com/ws/api.dll'
-  : 'https://api.ebay.com/ws/api.dll';
+// eBay API endpoints
+const FINDING_API_URL = 'https://svcs.ebay.com/services/search/FindingService/v1';
+const SHOPPING_API_URL = 'https://open.api.ebay.com/shopping';
 
 // Helper function to delay execution (for rate limiting)
 const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
@@ -32,36 +28,37 @@ async function fetchSellerListingsWithRetry(maxRetries = 3, initialDelay = 5000)
     try {
       console.log(`Fetching listings for seller: ${EBAY_SELLER_ID} (Attempt ${retries + 1}/${maxRetries + 1})`);
       
-      // Use the Trading API with GetSellerList operation
+      // Use the Finding API with findItemsAdvanced operation
       const xmlPayload = `<?xml version="1.0" encoding="utf-8"?>
-      <GetSellerListRequest xmlns="urn:ebay:apis:eBLBaseComponents">
-        <RequesterCredentials>
-          <eBayAuthToken>${EBAY_USER_TOKEN}</eBayAuthToken>
-        </RequesterCredentials>
-        <DetailLevel>ReturnAll</DetailLevel>
-        <IncludeWatchCount>true</IncludeWatchCount>
-        <Pagination>
-          <EntriesPerPage>100</EntriesPerPage>
-          <PageNumber>1</PageNumber>
-        </Pagination>
-        <StartTimeFrom>2010-01-01T00:00:00.000Z</StartTimeFrom>
-        <StartTimeTo>2050-01-01T00:00:00.000Z</StartTimeTo>
-      </GetSellerListRequest>`;
+      <findItemsAdvancedRequest xmlns="http://www.ebay.com/marketplace/search/v1/services">
+        <itemFilter>
+          <name>Seller</name>
+          <value>${EBAY_SELLER_ID}</value>
+        </itemFilter>
+        <paginationInput>
+          <entriesPerPage>100</entriesPerPage>
+          <pageNumber>1</pageNumber>
+        </paginationInput>
+        <sortOrder>StartTimeNewest</sortOrder>
+        <outputSelector>PictureURLLarge</outputSelector>
+        <outputSelector>SellerInfo</outputSelector>
+      </findItemsAdvancedRequest>`;
       
       const response = await axios({
         method: 'post',
-        url: TRADING_API_URL,
+        url: FINDING_API_URL,
         headers: {
           'Content-Type': 'text/xml',
-          'X-EBAY-API-COMPATIBILITY-LEVEL': '1155',
-          'X-EBAY-API-CALL-NAME': 'GetSellerList',
-          'X-EBAY-API-SITEID': '0', // US site
-          'X-EBAY-API-APP-NAME': EBAY_APP_ID
+          'X-EBAY-SOA-SECURITY-APPNAME': EBAY_APP_ID,
+          'X-EBAY-SOA-OPERATION-NAME': 'findItemsAdvanced',
+          'X-EBAY-SOA-GLOBAL-ID': 'EBAY-US',
+          'X-EBAY-SOA-REQUEST-DATA-FORMAT': 'XML',
+          'X-EBAY-SOA-RESPONSE-DATA-FORMAT': 'XML'
         },
         data: xmlPayload
       });
       
-      console.log('Successfully received Trading API response');
+      console.log('Successfully received Finding API response');
       
       // Process XML response
       return new Promise((resolve, reject) => {
@@ -70,7 +67,7 @@ async function fetchSellerListingsWithRetry(maxRetries = 3, initialDelay = 5000)
             console.error('Error parsing XML response:', err);
             reject(err);
           } else {
-            resolve(processTradingApiResponse(result));
+            resolve(processFindingApiResponse(result));
           }
         });
       });
@@ -83,7 +80,7 @@ async function fetchSellerListingsWithRetry(maxRetries = 3, initialDelay = 5000)
           console.error('Response data:', JSON.stringify(error.response.data, null, 2));
         }
         
-        // Check if error is related to rate limiting or auth
+        // Check if error is related to rate limiting
         const isRateLimit = 
           error.response.status === 500 || 
           error.response.status === 429 || 
@@ -105,33 +102,111 @@ async function fetchSellerListingsWithRetry(maxRetries = 3, initialDelay = 5000)
   }
 }
 
-// Function to process Trading API response
-function processTradingApiResponse(xmlResult) {
-  try {
-    const sellerList = xmlResult.GetSellerListResponse;
+// Function to fetch full item details including description
+async function fetchFullItemDetails(itemIds) {
+  console.log(`Fetching full details for ${itemIds.length} items`);
+  
+  const itemDetails = [];
+  
+  // Process items in batches to avoid rate limiting
+  const batchSize = 5;
+  for (let i = 0; i < itemIds.length; i += batchSize) {
+    const batch = itemIds.slice(i, i + batchSize);
+    console.log(`Processing batch ${i/batchSize + 1} of ${Math.ceil(itemIds.length/batchSize)}`);
     
-    if (!sellerList || !sellerList.ItemArray || !sellerList.ItemArray[0] || !sellerList.ItemArray[0].Item) {
-      console.log('No items found in Trading API response');
+    const batchPromises = batch.map(async (itemId) => {
+      try {
+        console.log(`Fetching details for item ${itemId}`);
+        const response = await axios({
+          method: 'get',
+          url: SHOPPING_API_URL,
+          params: {
+            callname: 'GetSingleItem',
+            responseencoding: 'JSON',
+            appid: EBAY_APP_ID,
+            siteid: 0,
+            version: 967,
+            ItemID: itemId,
+            IncludeSelector: 'Description,ItemSpecifics'
+          }
+        });
+        
+        return response.data;
+      } catch (error) {
+        console.error(`Error fetching details for item ${itemId}:`, error.message);
+        return null;
+      }
+    });
+    
+    // Wait for all items in batch to complete
+    const batchResults = await Promise.all(batchPromises);
+    itemDetails.push(...batchResults.filter(result => result !== null));
+    
+    // Add delay between batches to avoid rate limiting
+    if (i + batchSize < itemIds.length) {
+      console.log('Waiting 2 seconds before next batch...');
+      await delay(2000);
+    }
+  }
+  
+  return itemDetails;
+}
+
+// Function to process Finding API response
+async function processFindingApiResponse(xmlResult) {
+  try {
+    // Check if we have items
+    const response = xmlResult.findItemsAdvancedResponse;
+    
+    if (!response || !response[0] || !response[0].searchResult || !response[0].searchResult[0] || 
+        !response[0].searchResult[0].item || response[0].searchResult[0].item.length === 0) {
+      console.log('No items found in Finding API response');
       return { itemSummaries: [] };
     }
     
-    const items = sellerList.ItemArray[0].Item;
+    const items = response[0].searchResult[0].item;
     console.log(`Found ${items.length} items from seller`);
+    
+    // Extract item IDs for fetching full details
+    const itemIds = items.map(item => item.itemId[0]);
+    
+    // Fetch full item details including descriptions
+    const fullDetails = await fetchFullItemDetails(itemIds);
+    console.log(`Fetched full details for ${fullDetails.length} items`);
+    
+    // Create lookup map for full details
+    const detailsMap = {};
+    fullDetails.forEach(detail => {
+      if (detail && detail.Item) {
+        detailsMap[detail.Item.ItemID] = detail.Item;
+      }
+    });
     
     const processedItems = items.map(item => {
       try {
+        // Get item ID
+        const itemId = item.itemId[0];
+        
+        // Get full details if available
+        const fullDetail = detailsMap[itemId];
+        
         // Extract image URL
         let imageUrl = 'https://placehold.co/600x400/gold/white?text=No+Image';
-        if (item.PictureDetails && item.PictureDetails[0] && item.PictureDetails[0].PictureURL && item.PictureDetails[0].PictureURL.length > 0) {
-          imageUrl = item.PictureDetails[0].PictureURL[0];
+        if (item.galleryURL && item.galleryURL[0]) {
+          imageUrl = item.galleryURL[0];
+        }
+        // Try to use larger image if available
+        if (item.pictureURLLarge && item.pictureURLLarge[0]) {
+          imageUrl = item.pictureURLLarge[0];
         }
         
         // Extract price
         let price = { value: 'N/A', currency: 'USD' };
-        if (item.SellingStatus && item.SellingStatus[0] && item.SellingStatus[0].CurrentPrice && item.SellingStatus[0].CurrentPrice.length > 0) {
+        if (item.sellingStatus && item.sellingStatus[0] && item.sellingStatus[0].currentPrice && 
+            item.sellingStatus[0].currentPrice[0]) {
           price = {
-            value: item.SellingStatus[0].CurrentPrice[0]._ || 'N/A',
-            currency: item.SellingStatus[0].CurrentPrice[0].$ ? item.SellingStatus[0].CurrentPrice[0].$.currencyID : 'USD'
+            value: item.sellingStatus[0].currentPrice[0]._,
+            currency: item.sellingStatus[0].currentPrice[0].$.currencyId
           };
         }
         
@@ -139,35 +214,55 @@ function processTradingApiResponse(xmlResult) {
         const specifics = [];
         
         // Add condition if available
-        if (item.ConditionDisplayName && item.ConditionDisplayName.length > 0) {
+        if (item.condition && item.condition[0] && item.condition[0].conditionDisplayName) {
           specifics.push({
             name: 'Condition',
-            value: item.ConditionDisplayName[0]
+            value: item.condition[0].conditionDisplayName[0]
           });
         }
         
-        // Add other available details like brand if available in item specifics
-        if (item.ItemSpecifics && item.ItemSpecifics[0] && item.ItemSpecifics[0].NameValueList) {
-          item.ItemSpecifics[0].NameValueList.forEach(spec => {
-            if (spec.Name && spec.Name.length > 0 && spec.Value && spec.Value.length > 0) {
-              specifics.push({
-                name: spec.Name[0],
-                value: spec.Value[0]
-              });
-            }
+        // Add category if available
+        if (item.primaryCategory && item.primaryCategory[0] && item.primaryCategory[0].categoryName) {
+          specifics.push({
+            name: 'Category',
+            value: item.primaryCategory[0].categoryName[0]
           });
         }
         
-        // Create URL from item ID
-        const itemWebUrl = `https://www.ebay.com/itm/${item.ItemID[0]}`;
+        // Add item specifics from full details if available
+        if (fullDetail && fullDetail.ItemSpecifics && fullDetail.ItemSpecifics.NameValueList) {
+          fullDetail.ItemSpecifics.NameValueList.forEach(spec => {
+            specifics.push({
+              name: spec.Name,
+              value: Array.isArray(spec.Value) ? spec.Value.join(', ') : spec.Value
+            });
+          });
+        }
+        
+        // Get description from full details
+        let fullDescription = '';
+        if (fullDetail && fullDetail.Description) {
+          fullDescription = fullDetail.Description;
+        }
+        
+        // Create short description from subtitle or item specifics if available
+        let shortDescription = '';
+        if (item.subtitle && item.subtitle[0]) {
+          shortDescription = item.subtitle[0];
+        } else if (fullDescription) {
+          // Create a plain text version of the HTML description
+          const textDesc = fullDescription.replace(/<[^>]*>/g, '');
+          shortDescription = textDesc.substring(0, 200) + (textDesc.length > 200 ? '...' : '');
+        }
         
         return {
-          itemId: item.ItemID[0],
-          title: item.Title[0],
+          itemId,
+          title: item.title[0],
           image: { imageUrl },
           price,
-          itemWebUrl,
-          shortDescription: item.Description ? item.Description[0].substring(0, 200) : '',
+          itemWebUrl: item.viewItemURL[0],
+          shortDescription,
+          fullDescription,
           specifics
         };
       } catch (itemError) {
@@ -178,7 +273,7 @@ function processTradingApiResponse(xmlResult) {
     
     return { itemSummaries: processedItems };
   } catch (error) {
-    console.error('Error processing Trading API results:', error);
+    console.error('Error processing Finding API results:', error);
     throw error;
   }
 }
@@ -200,6 +295,7 @@ function createMockData() {
         },
         itemWebUrl: 'https://www.ebay.com/itm/123456789',
         shortDescription: 'Beautiful Omega Seamaster from the 1960s in excellent condition. Automatic movement.',
+        fullDescription: '<div>Beautiful Omega Seamaster from the 1960s in excellent condition. Features an automatic movement that has been recently serviced. Comes with original box and papers. The watch shows minimal signs of wear for its age and keeps excellent time.</div>',
         specifics: [
           { name: 'Brand', value: 'Omega' },
           { name: 'Model', value: 'Seamaster' },
@@ -219,6 +315,7 @@ function createMockData() {
         },
         itemWebUrl: 'https://www.ebay.com/itm/987654321',
         shortDescription: 'Authentic Rolex Datejust with complete box and papers. Excellent condition.',
+        fullDescription: '<div>Authentic Rolex Datejust 36mm in stainless steel. This watch comes complete with original box and papers. The watch is in excellent condition with minimal wear. Features include: automatic movement, date function, jubilee bracelet, and stainless steel fluted bezel.</div>',
         specifics: [
           { name: 'Brand', value: 'Rolex' },
           { name: 'Model', value: 'Datejust' },
@@ -238,6 +335,7 @@ function createMockData() {
         },
         itemWebUrl: 'https://www.ebay.com/itm/564738291',
         shortDescription: 'Rare Seiko 6139 \"Pogue\" chronograph in all original condition. Sought-after collector piece.',
+        fullDescription: '<div>Rare Seiko 6139 "Pogue" chronograph in all original condition. This sought-after collector piece is named after Colonel William Pogue who wore this model on the Skylab 4 mission. Features include: automatic movement with chronograph function, day/date display, original bracelet, and the iconic yellow dial. The watch has been serviced and all functions work properly.</div>',
         specifics: [
           { name: 'Brand', value: 'Seiko' },
           { name: 'Model', value: '6139 Chronograph' },
