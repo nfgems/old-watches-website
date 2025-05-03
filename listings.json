@@ -30,68 +30,6 @@
           "value": "Automatic"
         }
       ]
-    },
-    {
-      "itemId": "987654321",
-      "title": "Rolex Datejust 36mm Stainless Steel - Box and Papers",
-      "image": {
-        "imageUrl": "https://i.ebayimg.com/images/g/13cAAOSwD2NjmO2I/s-l1600.jpg"
-      },
-      "price": {
-        "value": "5899.99",
-        "currency": "USD"
-      },
-      "itemWebUrl": "https://www.ebay.com/itm/987654321",
-      "shortDescription": "Authentic Rolex Datejust with complete box and papers. Excellent condition.",
-      "specifics": [
-        {
-          "name": "Brand",
-          "value": "Rolex"
-        },
-        {
-          "name": "Model",
-          "value": "Datejust"
-        },
-        {
-          "name": "Size",
-          "value": "36mm"
-        },
-        {
-          "name": "Condition",
-          "value": "Used - Very Good"
-        }
-      ]
-    },
-    {
-      "itemId": "564738291",
-      "title": "Vintage Seiko 6139 Chronograph - Pogue - All Original",
-      "image": {
-        "imageUrl": "https://i.ebayimg.com/images/g/CswAAOSwpHtgEV5w/s-l1600.jpg"
-      },
-      "price": {
-        "value": "1299.99",
-        "currency": "USD"
-      },
-      "itemWebUrl": "https://www.ebay.com/itm/564738291",
-      "shortDescription": "Rare Seiko 6139 \"Pogue\" chronograph in all original condition. Sought-after collector piece.",
-      "specifics": [
-        {
-          "name": "Brand",
-          "value": "Seiko"
-        },
-        {
-          "name": "Model",
-          "value": "6139 Chronograph"
-        },
-        {
-          "name": "Year",
-          "value": "1970s"
-        },
-        {
-          "name": "Condition",
-          "value": "Vintage - Good"
-        }
-      ]
     }
   ]
 }
