@@ -61,11 +61,12 @@ async function fetchSellerListingsWithRetry(maxRetries = 3, initialDelay = 5000)
       }
       console.log('Request headers:', JSON.stringify(logHeaders, null, 2));
       
-      // Use seller filter to get only listings from the specific seller
+      // FIXED: Use proper seller filter syntax
+      // The Browse API expects filter parameters in a specific format
       const queryParams = {
-        q: `seller:${EBAY_SELLER_ID}`,
         limit: 50, // Adjust as needed
-        filter: 'conditionIds:{1000|1500|2000|2500|3000|4000|5000|6000|7000}',
+        // Use proper filter syntax for seller
+        filter: `sellers:{${EBAY_SELLER_ID}}`,
         fieldgroups: 'FULL'  // Get complete item details
       };
       
@@ -148,6 +149,9 @@ async function fetchSellerListingsWithRetry(maxRetries = 3, initialDelay = 5000)
   console.log('Falling back to mock data due to unexpected exit from retry loop');
   return createMockData();
 }
+
+// Rest of the file remains the same...
+// (including the functions fetchFullItemDetails, processBrowseApiResponse, createMockData, and main)
 
 // Function to fetch full item details using Browse API
 async function fetchFullItemDetails(itemIds) {
