@@ -37,10 +37,18 @@
       // eBay OAuth configuration
       const clientId = 'EvanKort-sdw-PRD-30e925868-470c6485';
       const redirectUri = 'https://old.watches/auth-success.html';
-      const scope = 'https://api.ebay.com/oauth/api_scope';
       
-      // Build the authorization URL
-      const authUrl = `https://auth.ebay.com/oauth2/authorize?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=${encodeURIComponent(scope)}`;
+      // Define the scopes needed for Browse API
+      const scopes = [
+        'https://api.ebay.com/oauth/api_scope',
+        'https://api.ebay.com/oauth/api_scope/buy.item.feed',
+        'https://api.ebay.com/oauth/api_scope/buy.marketing',
+        'https://api.ebay.com/oauth/api_scope/buy.product.feed',
+        'https://api.ebay.com/oauth/api_scope/buy.marketplace.insights'
+      ].join('%20'); // URL encode the spaces between scopes
+      
+      // Build the authorization URL with scopes
+      const authUrl = `https://auth.ebay.com/oauth2/authorize?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=${scopes}`;
       
       // Redirect to eBay's authorization page
       window.location.href = authUrl;
