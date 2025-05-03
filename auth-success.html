@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Authorization Successful - Old Watches</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header>
+    <div class="container">
+      <h1>Old Watches</h1>
+      <p>Authorization Successful</p>
+    </div>
+  </header>
+  
+  <main class="container">
+    <section class="text-center">
+      <h2>Thank You for Authorizing Old Watches</h2>
+      <p>Your eBay authorization was successful. You can close this window now.</p>
+      
+      <div id="token-info" style="margin-top: 40px;">
+        <!-- This will be populated via JavaScript if needed -->
+      </div>
+      
+      <div style="margin-top: 40px;">
+        <a href="index.html" class="view-button">Return to Homepage</a>
+      </div>
+    </section>
+  </main>
+  
+  <footer>
+    <div class="container">
+      <p>&copy; 2025 Old.Watches - All watches available on <a href="https://www.ebay.com/usr/honey_suckle" target="_blank">eBay</a></p>
+    </div>
+  </footer>
+
+  <script>
+    // Get URL parameters (in case eBay returns any)
+    const urlParams = new URLSearchParams(window.location.search);
+    const code = urlParams.get('code');
+    
+    // If there's a code parameter, display it (for development purposes)
+    if (code && document.getElementById('token-info')) {
+      document.getElementById('token-info').innerHTML = 
+        '<p>Authorization code received. This code can be exchanged for an access token.</p>';
+    }
+  </script>
+</body>
+</html>
