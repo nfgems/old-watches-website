@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>eBay Authorization - Old Watches</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header>
+    <div class="container">
+      <h1>Old Watches</h1>
+      <p>eBay Authorization</p>
+    </div>
+  </header>
+  
+  <main class="container">
+    <section class="text-center">
+      <h2>Connecting to eBay</h2>
+      <p>You'll be redirected to eBay to authorize our application.</p>
+      <p>This allows us to fetch watch listings from the seller.</p>
+      
+      <div style="margin-top: 40px;">
+        <button id="authorize-button" class="view-button">Authorize with eBay</button>
+      </div>
+    </section>
+  </main>
+  
+  <footer>
+    <div class="container">
+      <p>&copy; 2025 Old.Watches - All watches available on <a href="https://www.ebay.com/usr/honey_suckle" target="_blank">eBay</a></p>
+    </div>
+  </footer>
+
+  <script>
+    document.getElementById('authorize-button').addEventListener('click', function() {
+      // eBay OAuth configuration
+      const clientId = 'EvanKort-sdw-PRD-30e925868-470c6485';
+      const redirectUri = 'https://old.watches/auth-success.html';
+      const scope = 'https://api.ebay.com/oauth/api_scope';
+      
+      // Build the authorization URL
+      const authUrl = `https://auth.ebay.com/oauth2/authorize?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=${encodeURIComponent(scope)}`;
+      
+      // Redirect to eBay's authorization page
+      window.location.href = authUrl;
+    });
+  </script>
+</body>
+</html>
