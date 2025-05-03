@@ -8,7 +8,7 @@ const fs = require('fs');
 const EBAY_APP_ID = process.env.EBAY_APP_ID;
 const EBAY_CERT_ID = process.env.EBAY_CERT_ID;
 const EBAY_SELLER_ID = process.env.EBAY_SELLER_ID || 'honey_suckle';
-const USE_SANDBOX = true; // Set to false when ready for production
+const USE_SANDBOX = false; // Set to false when ready for production
 
 // eBay API endpoints
 const BASE_URL = USE_SANDBOX 
