@@ -25,6 +25,7 @@ async function refreshToken() {
     console.log('Refreshing access token...');
     
     // Request to refresh the token
+    // Include the required scopes for Browse API
     const response = await axios({
       method: 'post',
       url: 'https://api.ebay.com/identity/v1/oauth2/token',
@@ -32,7 +33,7 @@ async function refreshToken() {
         'Content-Type': 'application/x-www-form-urlencoded',
         'Authorization': 'Basic ' + Buffer.from(`${CLIENT_ID}:${CLIENT_SECRET}`).toString('base64')
       },
-      data: `grant_type=refresh_token&refresh_token=${refreshToken}`
+      data: `grant_type=refresh_token&refresh_token=${refreshToken}&scope=https://api.ebay.com/oauth/api_scope https://api.ebay.com/oauth/api_scope/buy.item.feed https://api.ebay.com/oauth/api_scope/buy.marketing https://api.ebay.com/oauth/api_scope/buy.product.feed https://api.ebay.com/oauth/api_scope/buy.marketplace.insights`
     });
     
     const newTokenData = response.data;
