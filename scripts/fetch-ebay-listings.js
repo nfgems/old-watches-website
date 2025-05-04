@@ -39,7 +39,7 @@ async function fetchAllSellerListings(maxRetries = 3, initialDelay = 5000) {
   const limit = 50; // Maximum allowed by eBay API
   let hasMorePages = true;
   
-  console.log('Starting to fetch all listings with pagination');
+  console.log('Starting to fetch all listings with pagination with limit:', limit);
   
   while (hasMorePages) {
     try {
@@ -55,12 +55,14 @@ async function fetchAllSellerListings(maxRetries = 3, initialDelay = 5000) {
       allListings = allListings.concat(results.itemSummaries);
       
       // Check if we need to fetch more pages
+      console.log('Checking pagination: total =', results.total, 'offset =', offset, 'limit =', limit);
       if (results.total && offset + limit < results.total) {
         offset += limit;
         console.log(`Moving to next page, offset: ${offset}`);
         // Add a delay between pagination requests to avoid rate limiting
         await delay(1000);
       } else {
+        console.log('No more pages to fetch. Ending pagination.');
         hasMorePages = false;
       }
     } catch (error) {
@@ -101,10 +103,10 @@ async function fetchSellerListingsPage(offset = 0, limit = 50, maxRetries = 3, i
       }
       console.log('Request headers:', JSON.stringify(logHeaders, null, 2));
       
-      // UPDATED: Broader search query with multiple terms and proper encoding
+      // MODIFIED: Use empty search query to get ALL listings from the seller
       const queryParams = {
-        q: encodeURIComponent("watch OR Cartier"),  // Properly encoded with OR operator
-        filter: encodeURIComponent(`sellers:{${EBAY_SELLER_ID}}`),
+        q: "",  // Empty string to get all listings
+        filter: `sellers:{${EBAY_SELLER_ID}}`,
         limit: limit,
         offset: offset,
         fieldgroups: 'FULL'
@@ -123,6 +125,16 @@ async function fetchSellerListingsPage(offset = 0, limit = 50, maxRetries = 3, i
       
       console.log('Successfully received Browse API response');
       console.log(`Total results reported by API: ${response.data.total || 'unknown'}`);
+      
+      // DEBUG: Log API response structure and count
+      console.log('API response structure:', Object.keys(response.data));
+      console.log('Total items in response:', 
+        response.data.itemSummaries ? response.data.itemSummaries.length : 0);
+      
+      // If available, log first item to understand structure
+      if (response.data.itemSummaries && response.data.itemSummaries.length > 0) {
+        console.log('First item props:', Object.keys(response.data.itemSummaries[0]));
+      }
       
       return response.data;
       
@@ -255,7 +267,7 @@ async function processBrowseApiResponse(apiResponse) {
     }
     
     const items = apiResponse.itemSummaries;
-    console.log(`Found ${items.length} items from seller`);
+    console.log(`Pre-filter: Found ${items.length} items from seller`);
     
     // Extract item IDs for fetching full details
     const itemIds = items.map(item => item.itemId);
@@ -363,6 +375,13 @@ async function processBrowseApiResponse(apiResponse) {
           });
         }
         
+        // Add Type field for manual/digital/quartz categorization
+        // This helps app.js categorize the watches
+        specifics.push({
+          name: 'Type',
+          value: determineWatchType(item.title, fullDetail)
+        });
+        
         // Get description from full details or create a short description
         let fullDescription = '';
         let shortDescription = '';
@@ -395,13 +414,56 @@ async function processBrowseApiResponse(apiResponse) {
       }
     }).filter(item => item !== null);
     
-    console.log(`Processed ${processedItems.length} active listings (filtered out ${items.length - processedItems.length} ended listings)`);
+    console.log(`Post-filter: Processed ${processedItems.length} active listings (filtered out ${items.length - processedItems.length} ended listings)`);
     
     return { itemSummaries: processedItems };
   } catch (error) {
     console.error('Error processing Browse API results:', error);
     throw error;
   }
+}
+
+// Helper function to determine watch type based on title and details
+function determineWatchType(title, fullDetail) {
+  if (!title) return 'Quartz'; // Default
+  
+  const titleLower = title.toLowerCase();
+  
+  // Check for digital first
+  if (titleLower.includes('digital') || 
+      titleLower.includes('ana-digi') || 
+      titleLower.includes('ana digi') ||
+      titleLower.includes('led watch') ||
+      titleLower.includes('calculator watch')) {
+    return 'Digital';
+  }
+  
+  // Then check for manual
+  if (titleLower.includes('manual') || 
+      titleLower.includes('mechanical') ||
+      titleLower.includes('automatic') ||
+      titleLower.includes('wind') ||
+      titleLower.includes('winding') ||
+      titleLower.includes('vintage') && (
+        titleLower.includes('1950') ||
+        titleLower.includes('1940') ||
+        titleLower.includes('1930') ||
+        titleLower.includes('1920') ||
+        titleLower.includes('1910')
+      )) {
+    return 'Manual';
+  }
+  
+  // Check for specific brands that should be in manual category
+  if (titleLower.includes('elgin') || 
+      titleLower.includes('waltham') || 
+      titleLower.includes('illinois') ||
+      titleLower.includes('pocket watch')) {
+    return 'Manual';
+  }
+  
+  // Otherwise, categorize as quartz
+  return 'Quartz';
 }
 
 // Function to create mock data for fallback
@@ -426,7 +488,8 @@ function createMockData() {
           { name: 'Brand', value: 'Omega' },
           { name: 'Model', value: 'Seamaster' },
           { name: 'Year', value: '1960s' },
-          { name: 'Movement', value: 'Automatic' }
+          { name: 'Movement', value: 'Automatic' },
+          { name: 'Type', value: 'Manual' }
         ]
       },
       {
@@ -446,7 +509,8 @@ function createMockData() {
           { name: 'Brand', value: 'Rolex' },
           { name: 'Model', value: 'Datejust' },
           { name: 'Size', value: '36mm' },
-          { name: 'Condition', value: 'Used - Very Good' }
+          { name: 'Condition', value: 'Used - Very Good' },
+          { name: 'Type', value: 'Quartz' }
         ]
       },
       {
@@ -466,7 +530,8 @@ function createMockData() {
           { name: 'Brand', value: 'Seiko' },
           { name: 'Model', value: '6139 Chronograph' },
           { name: 'Year', value: '1970s' },
-          { name: 'Condition', value: 'Vintage - Good' }
+          { name: 'Condition', value: 'Vintage - Good' },
+          { name: 'Type', value: 'Manual' }
         ]
       }
     ]
@@ -493,6 +558,10 @@ async function main() {
     
     // Save to JSON file
     fs.writeFileSync('listings.json', JSON.stringify(processedListings, null, 2));
+    
+    // DEBUG: Check final output data
+    console.log('Final listings content preview:', 
+      JSON.stringify(processedListings).substring(0, 300) + '...');
     
     console.log('Successfully saved listings to listings.json');
   } catch (error) {
