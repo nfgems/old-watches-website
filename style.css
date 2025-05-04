@@ -1,11 +1,16 @@
 :root {
-  --primary-color: #1a1a1a;
-  --accent-color: #9a7d42;
+  --primary-color: #1c1a17;
+  --secondary-color: #b29059;
+  --nineties-accent: #ff5987;
+  --nineties-secondary: #22dddd;
   --text-color: #333;
   --light-text: #fff;
-  --background: #f5f5f5;
+  --off-white: #f8f5f0;
   --card-bg: #fff;
-  --shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  --card-border: #e0d5c0;
+  --shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
+  --vintage-font: 'Times New Roman', Times, serif;
+  --modern-font: 'Helvetica Neue', Arial, sans-serif;
 }
 
 * {
@@ -15,10 +20,11 @@
 }
 
 body {
-  font-family: 'Helvetica Neue', Arial, sans-serif;
+  font-family: var(--modern-font);
   line-height: 1.6;
   color: var(--text-color);
-  background-color: var(--background);
+  background-color: var(--off-white);
+  background-image: url('https://www.transparenttextures.com/patterns/clean-gray-paper.png');
 }
 
 .container {
@@ -27,26 +33,177 @@ body {
   padding: 0 1rem;
 }
 
+/* Header with antique gold trim and texture */
 header {
   background-color: var(--primary-color);
   color: var(--light-text);
   text-align: center;
-  padding: 2rem 0;
+  padding: 2.5rem 0;
   margin-bottom: 2rem;
+  box-shadow: var(--shadow);
+  position: relative;
+  border-bottom: 5px solid var(--secondary-color);
+}
+
+header::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-image: url('https://www.transparenttextures.com/patterns/subtle-dark-vertical.png');
+  opacity: 0.3;
+  z-index: 0;
+}
+
+header .container {
+  position: relative;
+  z-index: 1;
 }
 
 header h1 {
-  font-size: 2.5rem;
-  margin-bottom: 0.5rem;
+  font-family: var(--vintage-font);
+  font-size: 3.5rem;
+  margin-bottom: 0.8rem;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  font-weight: 700;
+  color: var(--secondary-color);
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+}
+
+header p {
+  font-family: var(--vintage-font);
+  font-style: italic;
+  font-size: 1.2rem;
+  color: var(--light-text);
   letter-spacing: 1px;
 }
 
+/* Navigation */
+nav {
+  background-color: var(--primary-color);
+  padding: 0.5rem 0;
+  margin-top: -2rem;
+  margin-bottom: 2rem;
+  border-bottom: 3px solid var(--secondary-color);
+}
+
+.nav-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.nav-container a {
+  color: var(--light-text);
+  text-decoration: none;
+  padding: 0.5rem 1.5rem;
+  margin: 0 0.5rem;
+  font-family: var(--vintage-font);
+  font-size: 1.1rem;
+  letter-spacing: 1px;
+  transition: all 0.3s ease;
+  border-bottom: 2px solid transparent;
+}
+
+.nav-container a:hover {
+  color: var(--secondary-color);
+  border-bottom: 2px solid var(--secondary-color);
+}
+
+/* Filters Container */
+.filters-container {
+  margin-bottom: 2rem;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  background-color: var(--card-bg);
+  border-radius: 8px;
+  padding: 1.5rem;
+  box-shadow: var(--shadow);
+  border: 1px solid var(--card-border);
+}
+
+/* Category filters */
+.category-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.category-button {
+  background-color: var(--primary-color);
+  color: var(--light-text);
+  border: 2px solid var(--secondary-color);
+  padding: 0.6rem 1.2rem;
+  font-family: var(--vintage-font);
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  border-radius: 4px;
+}
+
+.category-button:hover, .category-button.active {
+  background-color: var(--secondary-color);
+  color: var(--primary-color);
+}
+
+.category-button.nineties {
+  background-color: var(--nineties-accent);
+  border-color: var(--nineties-secondary);
+}
+
+.category-button.nineties:hover, .category-button.nineties.active {
+  background-color: var(--nineties-secondary);
+  color: black;
+}
+
+/* Sort filter */
+.sort-filter {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.sort-filter label {
+  font-family: var(--vintage-font);
+  font-weight: bold;
+  color: var(--primary-color);
+}
+
+.sort-select {
+  padding: 0.6rem 1.2rem;
+  border: 2px solid var(--secondary-color);
+  border-radius: 4px;
+  background-color: var(--off-white);
+  font-family: var(--vintage-font);
+  color: var(--primary-color);
+  cursor: pointer;
+  outline: none;
+  min-width: 200px;
+}
+
+.sort-select:focus {
+  border-color: var(--nineties-accent);
+}
+
+/* Message containers */
 #loading-message, #error-message {
   text-align: center;
   padding: 2rem;
   font-size: 1.2rem;
+  background-color: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: 8px;
+  box-shadow: var(--shadow);
+  margin-bottom: 2rem;
 }
 
+/* Grid layout for listings */
 .listings-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
@@ -54,19 +211,61 @@ header h1 {
   margin-bottom: 2rem;
 }
 
+/* Vintage watch card style */
 .listing-card {
   background-color: var(--card-bg);
   border-radius: 8px;
   overflow: hidden;
   box-shadow: var(--shadow);
   transition: transform 0.3s ease, box-shadow 0.3s ease;
+  border: 1px solid var(--card-border);
+  position: relative;
+}
+
+.listing-card.vintage {
+  border: 1px solid var(--secondary-color);
+}
+
+.listing-card.nineties {
+  border: 2px solid var(--nineties-accent);
+  box-shadow: 5px 5px 0 rgba(0, 0, 0, 0.8);
+  border-radius: 0;
 }
 
 .listing-card:hover {
   transform: translateY(-5px);
-  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
 }
 
+.listing-card.nineties:hover {
+  transform: translateY(-5px) rotate(1deg);
+}
+
+/* Era badge */
+.era-badge {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  padding: 0.3rem 0.8rem;
+  font-size: 0.8rem;
+  font-weight: bold;
+  border-radius: 4px;
+  z-index: 2;
+}
+
+.era-badge.vintage {
+  background-color: var(--secondary-color);
+  color: var(--primary-color);
+}
+
+.era-badge.nineties {
+  background-color: var(--nineties-accent);
+  color: white;
+  border-radius: 0;
+  transform: rotate(3deg);
+}
+
+/* Image container */
 .listing-image {
   height: 240px;
   overflow: hidden;
@@ -84,28 +283,89 @@ header h1 {
   transform: scale(1.05);
 }
 
+.listing-card.vintage .listing-image::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: radial-gradient(ellipse at center, rgba(0,0,0,0) 80%, rgba(0,0,0,0.3) 100%);
+  z-index: 1;
+  pointer-events: none;
+}
+
+.listing-card.nineties .listing-image::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(135deg, rgba(255,89,135,0.2) 0%, rgba(34,221,221,0.2) 100%);
+  z-index: 1;
+  pointer-events: none;
+}
+
+/* Listing details */
 .listing-details {
   padding: 1.5rem;
 }
 
+.listing-card.vintage .listing-details {
+  background-color: var(--off-white);
+  border-top: 1px solid var(--card-border);
+}
+
+.listing-card.nineties .listing-details {
+  background-color: white;
+  background-image: url('https://www.transparenttextures.com/patterns/tiny-grid.png');
+}
+
 .listing-details h2 {
-  font-size: 1.2rem;
+  font-size: 1.4rem;
   margin-bottom: 0.5rem;
   line-height: 1.4;
-  height: 3.4em;
   overflow: hidden;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
 }
 
+.listing-card.vintage .listing-details h2 {
+  font-family: var(--vintage-font);
+  color: var(--primary-color);
+}
+
+.listing-card.nineties .listing-details h2 {
+  font-family: 'Arial Black', Gadget, sans-serif;
+  text-transform: uppercase;
+  color: var(--nineties-accent);
+}
+
+/* Price display */
 .price {
-  font-size: 1.4rem;
+  font-size: 1.6rem;
   font-weight: bold;
-  color: var(--accent-color);
   margin-bottom: 1rem;
 }
 
+.listing-card.vintage .price {
+  color: var(--secondary-color);
+  font-family: var(--vintage-font);
+}
+
+.listing-card.nineties .price {
+  color: var(--nineties-accent);
+  position: relative;
+  display: inline-block;
+  padding: 0.2rem 0.5rem;
+  background-color: black;
+  color: white;
+  transform: rotate(-2deg);
+}
+
+/* Item specifications */
 .item-specifics {
   margin-bottom: 1rem;
   font-size: 0.9rem;
@@ -116,9 +376,61 @@ header h1 {
   margin-bottom: 0.3rem;
 }
 
+.listing-card.vintage .item-specifics {
+  font-style: italic;
+}
+
+.listing-card.nineties .item-specifics {
+  font-family: 'Courier New', Courier, monospace;
+}
+
+/* Description read more/less styles */
+.description-short, .description-full {
+  margin-bottom: 1rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px dotted var(--card-border);
+}
+
+.read-more-link, .read-less-link {
+  display: inline-block;
+  margin-top: 0.5rem;
+  font-size: 0.9rem;
+  font-weight: bold;
+  text-decoration: none;
+  transition: all 0.2s;
+}
+
+.listing-card.vintage .read-more-link, 
+.listing-card.vintage .read-less-link {
+  color: var(--secondary-color);
+  font-family: var(--vintage-font);
+  font-style: italic;
+}
+
+.listing-card.nineties .read-more-link, 
+.listing-card.nineties .read-less-link {
+  color: var(--nineties-accent);
+  font-family: 'Arial Black', Gadget, sans-serif;
+  text-transform: uppercase;
+  font-size: 0.8rem;
+}
+
+.listing-card.vintage .read-more-link:hover, 
+.listing-card.vintage .read-less-link:hover {
+  color: var(--primary-color);
+  text-decoration: underline;
+}
+
+.listing-card.nineties .read-more-link:hover, 
+.listing-card.nineties .read-less-link:hover {
+  color: var(--nineties-secondary);
+  text-decoration: none;
+}
+
+/* View button */
 .view-button {
   display: inline-block;
-  background-color: var(--accent-color);
+  background-color: var(--secondary-color);
   color: white;
   padding: 0.5rem 1rem;
   border-radius: 4px;
@@ -126,31 +438,151 @@ header h1 {
   transition: background-color 0.2s;
   text-align: center;
   width: 100%;
+  font-weight: bold;
 }
 
 .view-button:hover {
-  background-color: #7a6335;
+  background-color: #8a6c41;
 }
 
+.listing-card.nineties .view-button {
+  background-color: var(--nineties-accent);
+  border-radius: 0;
+  border: 2px solid black;
+  font-family: 'Arial Black', Gadget, sans-serif;
+  text-transform: uppercase;
+  font-size: 0.9rem;
+  letter-spacing: 1px;
+}
+
+.listing-card.nineties .view-button:hover {
+  background-color: var(--nineties-secondary);
+  color: black;
+}
+
+/* No results message */
+.no-results {
+  grid-column: 1 / -1;
+  text-align: center;
+  padding: 3rem;
+  background-color: var(--card-bg);
+  border-radius: 8px;
+  box-shadow: var(--shadow);
+  font-size: 1.2rem;
+  color: #666;
+  font-style: italic;
+}
+
+/* Footer with antique styling */
 footer {
   text-align: center;
-  padding: 2rem 0;
+  padding: 2.5rem 0;
   background-color: var(--primary-color);
   color: var(--light-text);
-  margin-top: 2rem;
+  margin-top: 3rem;
+  border-top: 5px solid var(--secondary-color);
+  position: relative;
+}
+
+footer::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-image: url('https://www.transparenttextures.com/patterns/subtle-dark-vertical.png');
+  opacity: 0.3;
+  z-index: 0;
+}
+
+footer .container {
+  position: relative;
+  z-index: 1;
 }
 
 footer a {
-  color: var(--light-text);
+  color: var(--secondary-color);
   text-decoration: underline;
+  transition: color 0.3s;
 }
 
+footer a:hover {
+  color: var(--light-text);
+}
+
+/* Back to top button */
+.back-to-top {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  background-color: var(--secondary-color);
+  color: white;
+  width: 40px;
+  height: 40px;
+  text-align: center;
+  line-height: 40px;
+  border-radius: 50%;
+  font-size: 20px;
+  box-shadow: var(--shadow);
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.3s, transform 0.3s;
+  z-index: 10;
+}
+
+.back-to-top.visible {
+  opacity: 1;
+}
+
+.back-to-top:hover {
+  transform: translateY(-5px);
+}
+
+/* Update timestamp */
+.update-timestamp {
+  text-align: center;
+  margin: 2rem 0;
+  font-style: italic;
+  color: #888;
+}
+
+/* Responsive styles */
 @media (max-width: 768px) {
+  .filters-container {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .category-filters {
+    justify-content: center;
+  }
+  
+  .sort-filter {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .sort-select {
+    width: 100%;
+  }
+  
+  header h1 {
+    font-size: 2.5rem;
+  }
+  
   .listings-grid {
     grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 1.5rem;
   }
   
   .listing-image {
     height: 200px;
+  }
+}
+
+@media (max-width: 480px) {
+  .listings-grid {
+    grid-template-columns: 1fr;
   }
 }
