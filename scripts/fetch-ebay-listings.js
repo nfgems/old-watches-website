@@ -101,9 +101,9 @@ async function fetchSellerListingsPage(offset = 0, limit = 50, maxRetries = 3, i
       }
       console.log('Request headers:', JSON.stringify(logHeaders, null, 2));
       
-      // CRITICAL FIX: Add a search query parameter
+      // UPDATED FIX: Use an empty search query to get ALL listings
       const queryParams = {
-        q: "watch", // Add a search keyword relevant to your inventory
+        q: "", // Empty search query will return everything
         filter: `sellers:{${EBAY_SELLER_ID}},buyingOptions:{FIXED_PRICE|AUCTION}`,
         limit: limit,
         offset: offset,
