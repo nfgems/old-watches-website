@@ -191,6 +191,52 @@ nav {
   border-color: var(--digital-accent);
 }
 
+/* View toggle container */
+.view-toggle-container {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-left: auto;
+}
+
+.view-toggle-label {
+  font-family: var(--vintage-font);
+  font-weight: bold;
+  color: var(--primary-color);
+}
+
+.view-toggle {
+  display: flex;
+  background-color: var(--off-white);
+  border: 2px solid var(--secondary-color);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.view-toggle-btn {
+  padding: 0.4rem 0.8rem;
+  background: none;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+}
+
+.view-toggle-btn i {
+  font-size: 1.2rem;
+  color: var(--primary-color);
+}
+
+.view-toggle-btn.active {
+  background-color: var(--secondary-color);
+}
+
+.view-toggle-btn.active i {
+  color: white;
+}
+
 /* Message containers */
 #loading-message, #error-message {
   text-align: center;
@@ -209,6 +255,19 @@ nav {
   grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
   gap: 2rem;
   margin-bottom: 2rem;
+}
+
+/* Grid view (4 columns) */
+.listings-grid.grid-view {
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 1.5rem;
+}
+
+/* Horizontal cards view */
+.listings-grid.horizontal-view {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
 }
 
 /* Watch card style */
@@ -239,6 +298,25 @@ nav {
 
 .listing-card.digital:hover {
   transform: translateY(-5px) rotate(1deg);
+}
+
+/* Horizontal card layout */
+.listing-card.horizontal {
+  display: flex;
+  flex-direction: row;
+  max-height: 300px;
+}
+
+.listing-card.horizontal .listing-image {
+  width: 300px;
+  height: 100%;
+  flex-shrink: 0;
+}
+
+.listing-card.horizontal .listing-details {
+  flex: 1;
+  overflow-y: auto;
+  max-height: 300px;
 }
 
 /* Category badge */
@@ -583,6 +661,12 @@ footer a:hover {
     width: 100%;
   }
   
+  .view-toggle-container {
+    margin-left: 0;
+    justify-content: center;
+    margin-top: 1rem;
+  }
+  
   header h1 {
     font-size: 2.5rem;
   }
@@ -592,13 +676,36 @@ footer a:hover {
     gap: 1.5rem;
   }
   
+  .listings-grid.grid-view {
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  }
+  
   .listing-image {
     height: 200px;
+  }
+  
+  .listing-card.horizontal {
+    flex-direction: column;
+    max-height: none;
+  }
+  
+  .listing-card.horizontal .listing-image {
+    width: 100%;
+    height: 200px;
+  }
+  
+  .listing-card.horizontal .listing-details {
+    max-height: none;
   }
 }
 
 @media (max-width: 480px) {
   .listings-grid {
     grid-template-columns: 1fr;
+  }
+  
+  .listings-grid.grid-view {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
   }
 }
