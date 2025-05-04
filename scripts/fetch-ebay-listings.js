@@ -101,12 +101,10 @@ async function fetchSellerListingsPage(offset = 0, limit = 50, maxRetries = 3, i
       }
       console.log('Request headers:', JSON.stringify(logHeaders, null, 2));
       
-      // IMPORTANT CHANGE: Remove the 'q' parameter to get ALL listings
-      // Use category_ids=281 (Jewelry & Watches) as a required parameter instead
-      // This ensures we get all watches without needing a specific search term
+      // CRITICAL FIX: Include both FIXED_PRICE and AUCTION buying options
+      // Remove the category filter to get ALL listings regardless of category
       const queryParams = {
-        category_ids: '281', // Jewelry & Watches category
-        filter: `sellers:{${EBAY_SELLER_ID}}`,
+        filter: `sellers:{${EBAY_SELLER_ID}},buyingOptions:{FIXED_PRICE|AUCTION}`,
         limit: limit,
         offset: offset,
         fieldgroups: 'FULL'
@@ -354,6 +352,14 @@ async function processBrowseApiResponse(apiResponse) {
           specifics.push({
             name: 'Auction End Date',
             value: new Date(item.itemEndDate).toLocaleString()
+          });
+        }
+        
+        // Add bid count if it's an auction
+        if (item.bidCount !== undefined) {
+          specifics.push({
+            name: 'Current Bids',
+            value: item.bidCount.toString()
           });
         }
         
