@@ -1,8 +1,8 @@
 :root {
   --primary-color: #1c1a17;
   --secondary-color: #b29059;
-  --nineties-accent: #ff5987;
-  --nineties-secondary: #22dddd;
+  --digital-accent: #ff5987;
+  --digital-secondary: #22dddd;
   --text-color: #333;
   --light-text: #fff;
   --off-white: #f8f5f0;
@@ -152,13 +152,13 @@ nav {
   color: var(--primary-color);
 }
 
-.category-button.nineties {
-  background-color: var(--nineties-accent);
-  border-color: var(--nineties-secondary);
+.category-button.digital {
+  background-color: var(--digital-accent);
+  border-color: var(--digital-secondary);
 }
 
-.category-button.nineties:hover, .category-button.nineties.active {
-  background-color: var(--nineties-secondary);
+.category-button.digital:hover, .category-button.digital.active {
+  background-color: var(--digital-secondary);
   color: black;
 }
 
@@ -188,7 +188,7 @@ nav {
 }
 
 .sort-select:focus {
-  border-color: var(--nineties-accent);
+  border-color: var(--digital-accent);
 }
 
 /* Message containers */
@@ -211,7 +211,7 @@ nav {
   margin-bottom: 2rem;
 }
 
-/* Vintage watch card style */
+/* Watch card style */
 .listing-card {
   background-color: var(--card-bg);
   border-radius: 8px;
@@ -222,12 +222,12 @@ nav {
   position: relative;
 }
 
-.listing-card.vintage {
+.listing-card.manual {
   border: 1px solid var(--secondary-color);
 }
 
-.listing-card.nineties {
-  border: 2px solid var(--nineties-accent);
+.listing-card.digital {
+  border: 2px solid var(--digital-accent);
   box-shadow: 5px 5px 0 rgba(0, 0, 0, 0.8);
   border-radius: 0;
 }
@@ -237,12 +237,12 @@ nav {
   box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
 }
 
-.listing-card.nineties:hover {
+.listing-card.digital:hover {
   transform: translateY(-5px) rotate(1deg);
 }
 
-/* Era badge */
-.era-badge {
+/* Category badge */
+.category-badge {
   position: absolute;
   top: 10px;
   right: 10px;
@@ -253,13 +253,13 @@ nav {
   z-index: 2;
 }
 
-.era-badge.vintage {
+.category-badge.manual {
   background-color: var(--secondary-color);
   color: var(--primary-color);
 }
 
-.era-badge.nineties {
-  background-color: var(--nineties-accent);
+.category-badge.digital {
+  background-color: var(--digital-accent);
   color: white;
   border-radius: 0;
   transform: rotate(3deg);
@@ -283,7 +283,7 @@ nav {
   transform: scale(1.05);
 }
 
-.listing-card.vintage .listing-image::before {
+.listing-card.manual .listing-image::before {
   content: "";
   position: absolute;
   top: 0;
@@ -295,7 +295,7 @@ nav {
   pointer-events: none;
 }
 
-.listing-card.nineties .listing-image::before {
+.listing-card.digital .listing-image::before {
   content: "";
   position: absolute;
   top: 0;
@@ -312,12 +312,12 @@ nav {
   padding: 1.5rem;
 }
 
-.listing-card.vintage .listing-details {
+.listing-card.manual .listing-details {
   background-color: var(--off-white);
   border-top: 1px solid var(--card-border);
 }
 
-.listing-card.nineties .listing-details {
+.listing-card.digital .listing-details {
   background-color: white;
   background-image: url('https://www.transparenttextures.com/patterns/tiny-grid.png');
 }
@@ -332,15 +332,15 @@ nav {
   -webkit-box-orient: vertical;
 }
 
-.listing-card.vintage .listing-details h2 {
+.listing-card.manual .listing-details h2 {
   font-family: var(--vintage-font);
   color: var(--primary-color);
 }
 
-.listing-card.nineties .listing-details h2 {
+.listing-card.digital .listing-details h2 {
   font-family: 'Arial Black', Gadget, sans-serif;
   text-transform: uppercase;
-  color: var(--nineties-accent);
+  color: var(--digital-accent);
 }
 
 /* Price display */
@@ -350,13 +350,13 @@ nav {
   margin-bottom: 1rem;
 }
 
-.listing-card.vintage .price {
+.listing-card.manual .price {
   color: var(--secondary-color);
   font-family: var(--vintage-font);
 }
 
-.listing-card.nineties .price {
-  color: var(--nineties-accent);
+.listing-card.digital .price {
+  color: var(--digital-accent);
   position: relative;
   display: inline-block;
   padding: 0.2rem 0.5rem;
@@ -376,11 +376,11 @@ nav {
   margin-bottom: 0.3rem;
 }
 
-.listing-card.vintage .item-specifics {
+.listing-card.manual .item-specifics {
   font-style: italic;
 }
 
-.listing-card.nineties .item-specifics {
+.listing-card.digital .item-specifics {
   font-family: 'Courier New', Courier, monospace;
 }
 
@@ -400,30 +400,30 @@ nav {
   transition: all 0.2s;
 }
 
-.listing-card.vintage .read-more-link, 
-.listing-card.vintage .read-less-link {
+.listing-card.manual .read-more-link, 
+.listing-card.manual .read-less-link {
   color: var(--secondary-color);
   font-family: var(--vintage-font);
   font-style: italic;
 }
 
-.listing-card.nineties .read-more-link, 
-.listing-card.nineties .read-less-link {
-  color: var(--nineties-accent);
+.listing-card.digital .read-more-link, 
+.listing-card.digital .read-less-link {
+  color: var(--digital-accent);
   font-family: 'Arial Black', Gadget, sans-serif;
   text-transform: uppercase;
   font-size: 0.8rem;
 }
 
-.listing-card.vintage .read-more-link:hover, 
-.listing-card.vintage .read-less-link:hover {
+.listing-card.manual .read-more-link:hover, 
+.listing-card.manual .read-less-link:hover {
   color: var(--primary-color);
   text-decoration: underline;
 }
 
-.listing-card.nineties .read-more-link:hover, 
-.listing-card.nineties .read-less-link:hover {
-  color: var(--nineties-secondary);
+.listing-card.digital .read-more-link:hover, 
+.listing-card.digital .read-less-link:hover {
+  color: var(--digital-secondary);
   text-decoration: none;
 }
 
@@ -445,8 +445,8 @@ nav {
   background-color: #8a6c41;
 }
 
-.listing-card.nineties .view-button {
-  background-color: var(--nineties-accent);
+.listing-card.digital .view-button {
+  background-color: var(--digital-accent);
   border-radius: 0;
   border: 2px solid black;
   font-family: 'Arial Black', Gadget, sans-serif;
@@ -455,8 +455,8 @@ nav {
   letter-spacing: 1px;
 }
 
-.listing-card.nineties .view-button:hover {
-  background-color: var(--nineties-secondary);
+.listing-card.digital .view-button:hover {
+  background-color: var(--digital-secondary);
   color: black;
 }
 
