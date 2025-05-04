@@ -11,10 +11,19 @@ document.addEventListener('DOMContentLoaded', () => {
   const horizontalViewBtn = document.getElementById('horizontal-view-btn');
   const gridViewBtn = document.getElementById('grid-view-btn');
   
+  // Add search elements
+  const searchInput = document.getElementById('search-input');
+  const searchButton = document.getElementById('search-button');
+  const clearSearchButton = document.getElementById('clear-search');
+  const searchResultsInfo = document.getElementById('search-results-info');
+  const searchCount = document.getElementById('search-count');
+  const resetSearchButton = document.getElementById('reset-search');
+  
   let allListings = []; // Store all listings for filtering
   let currentCategory = 'all'; // Track current category filter
   let currentSort = 'default'; // Track current sort option
   let currentView = 'horizontal'; // Track current view mode (horizontal or grid)
+  let currentSearch = ''; // Track current search text
   
   // Initialize view from localStorage or default to horizontal
   initializeView();
@@ -27,6 +36,7 @@ document.addEventListener('DOMContentLoaded', () => {
       setupCategoryFilters();
       setupSortFilter();
       setupViewToggle(); // Add view toggle functionality
+      setupSearch(); // Add search functionality
     })
     .catch(handleError);
   
@@ -53,6 +63,58 @@ document.addEventListener('DOMContentLoaded', () => {
       // Default to horizontal view
       listingsContainer.classList.add('horizontal-view');
     }
+  }
+  
+  // Function to setup search functionality
+  function setupSearch() {
+    // Search button click handler
+    searchButton.addEventListener('click', () => {
+      performSearch();
+    });
+    
+    // Enter key press in search input
+    searchInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        performSearch();
+      }
+    });
+    
+    // Clear search button
+    clearSearchButton.addEventListener('click', () => {
+      searchInput.value = '';
+      currentSearch = '';
+      clearSearchButton.style.display = 'none';
+      searchResultsInfo.style.display = 'none';
+      applyFiltersAndSort();
+    });
+    
+    // Reset search button
+    resetSearchButton.addEventListener('click', () => {
+      searchInput.value = '';
+      currentSearch = '';
+      clearSearchButton.style.display = 'none';
+      searchResultsInfo.style.display = 'none';
+      applyFiltersAndSort();
+    });
+    
+    // Show/hide clear button based on search input content
+    searchInput.addEventListener('input', () => {
+      clearSearchButton.style.display = searchInput.value.length > 0 ? 'block' : 'none';
+    });
+  }
+  
+  // Function to perform search
+  function performSearch() {
+    currentSearch = searchInput.value.trim().toLowerCase();
+    
+    if (currentSearch.length > 0) {
+      clearSearchButton.style.display = 'block';
+    } else {
+      clearSearchButton.style.display = 'none';
+      searchResultsInfo.style.display = 'none';
+    }
+    
+    applyFiltersAndSort();
   }
   
   // Function to setup view toggle
@@ -292,7 +354,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
   
-  // Apply both category filtering and sorting
+  // Apply filters, search, and sorting
   function applyFiltersAndSort() {
     loadingMessage.style.display = 'none';
     
@@ -334,6 +396,48 @@ document.addEventListener('DOMContentLoaded', () => {
       });
     }
     
+    // Then, apply search filter if there is a search term
+    if (currentSearch.length > 0) {
+      filteredListings = filteredListings.filter(item => {
+        // Search in title
+        if (item.title.toLowerCase().includes(currentSearch)) {
+          return true;
+        }
+        
+        // Search in description
+        if (item.shortDescription && item.shortDescription.toLowerCase().includes(currentSearch)) {
+          return true;
+        }
+        
+        if (item.fullDescription && item.fullDescription.toLowerCase().includes(currentSearch)) {
+          return true;
+        }
+        
+        // Search in specifics
+        if (item.specifics && item.specifics.length > 0) {
+          return item.specifics.some(spec => 
+            spec.value.toLowerCase().includes(currentSearch) || 
+            spec.name.toLowerCase().includes(currentSearch)
+          );
+        }
+        
+        return false;
+      });
+      
+      // Update search results info
+      if (filteredListings.length === 0) {
+        searchCount.textContent = 'No watches found for your search.';
+      } else if (filteredListings.length === 1) {
+        searchCount.textContent = '1 watch found for your search.';
+      } else {
+        searchCount.textContent = `${filteredListings.length} watches found for your search.`;
+      }
+      
+      searchResultsInfo.style.display = 'flex';
+    } else {
+      searchResultsInfo.style.display = 'none';
+    }
+    
     // Then, apply sorting
     const sortedListings = sortListings(filteredListings, currentSort);
     
@@ -343,7 +447,13 @@ document.addEventListener('DOMContentLoaded', () => {
     if (sortedListings.length === 0) {
       const noResults = document.createElement('div');
       noResults.className = 'no-results';
-      noResults.textContent = `No watches found in the "${currentCategory}" category.`;
+      
+      if (currentSearch.length > 0) {
+        noResults.textContent = `No watches found matching "${currentSearch}"`;
+      } else {
+        noResults.textContent = `No watches found in the "${currentCategory}" category.`;
+      }
+      
       listingsContainer.appendChild(noResults);
       return;
     }
@@ -442,6 +552,20 @@ document.addEventListener('DOMContentLoaded', () => {
       const shortDescription = item.shortDescription || '';
       const fullDescription = item.fullDescription || item.shortDescription || '';
       
+      // Highlight search terms if there is a search query
+      let highlightedTitle = item.title;
+      let highlightedShortDesc = shortDescription;
+      let highlightedFullDesc = fullDescription;
+      let highlightedSpecifics = specificsHtml;
+      
+      if (currentSearch.length > 0) {
+        const regex = new RegExp(`(${currentSearch})`, 'gi');
+        highlightedTitle = highlightedTitle.replace(regex, '<span class="search-highlight">$1</span>');
+        highlightedShortDesc = highlightedShortDesc.replace(regex, '<span class="search-highlight">$1</span>');
+        highlightedFullDesc = highlightedFullDesc.replace(regex, '<span class="search-highlight">$1</span>');
+        highlightedSpecifics = highlightedSpecifics.replace(regex, '<span class="search-highlight">$1</span>');
+      }
+      
       // Create HTML for item card with category badge and read more/less functionality
       card.innerHTML = `
         <div class="category-badge ${category}">${category === 'manual' ? 'Manual' : 'Digital'}</div>
@@ -449,18 +573,18 @@ document.addEventListener('DOMContentLoaded', () => {
           <img src="${imageUrl}" alt="${item.title}">
         </div>
         <div class="listing-details">
-          <h2>${item.title}</h2>
+          <h2>${highlightedTitle}</h2>
           <p class="price">${item.price.value} ${item.price.currency}</p>
           <div class="item-specifics">
             <div class="description-short" id="${descriptionId}">
-              <p>${shortDescription}</p>
+              <p>${highlightedShortDesc}</p>
               <a href="#" class="read-more-link" id="${readMoreId}">Read more</a>
             </div>
             <div class="description-full" style="display: none;">
-              <p>${fullDescription}</p>
+              <p>${highlightedFullDesc}</p>
               <a href="#" class="read-less-link" id="${readLessId}">Read less</a>
             </div>
-            ${specificsHtml}
+            ${highlightedSpecifics}
           </div>
           <a href="${item.itemWebUrl}" class="view-button" target="_blank">View on eBay</a>
         </div>
@@ -481,6 +605,14 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById(descriptionId).nextElementSibling.style.display = 'none';
       });
     });
+    
+    // Scroll to top when applying filters/search
+    if (currentSearch.length > 0 || currentCategory !== 'all' || currentSort !== 'default') {
+      window.scrollTo({
+        top: 0,
+        behavior: 'smooth'
+      });
+    }
   }
   
   // Error handling function
