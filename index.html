@@ -17,6 +17,17 @@
   
   <main class="container">
     <div class="filters-container">
+      <!-- New search bar -->
+      <div class="search-container">
+        <input type="text" id="search-input" class="search-input" placeholder="Search watches by brand, model, year...">
+        <button id="search-button" class="search-button" title="Search">
+          <i class="fas fa-search"></i>
+        </button>
+        <button id="clear-search" class="clear-search" title="Clear search">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      
       <div class="category-filters">
         <button class="category-button active" data-category="all">All Watches</button>
         <button class="category-button manual" data-category="manual">Manual Watches</button>
@@ -32,7 +43,7 @@
         </select>
       </div>
       
-      <!-- New view toggle container -->
+      <!-- View toggle container -->
       <div class="view-toggle-container">
         <span class="view-toggle-label">View:</span>
         <div class="view-toggle">
@@ -44,6 +55,11 @@
           </button>
         </div>
       </div>
+    </div>
+    
+    <div id="search-results-info" class="search-results-info" style="display: none;">
+      <span id="search-count"></span>
+      <button id="reset-search" class="reset-search-button">Show All Watches</button>
     </div>
     
     <div id="loading-message">Loading our collection of timepieces...</div>
