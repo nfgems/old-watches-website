@@ -101,10 +101,10 @@ async function fetchSellerListingsPage(offset = 0, limit = 50, maxRetries = 3, i
       }
       console.log('Request headers:', JSON.stringify(logHeaders, null, 2));
       
-      // CRITICAL FIX: Add a search query parameter
+      // UPDATED: Broader search query with multiple terms and proper encoding
       const queryParams = {
-        q: "watch", // Add a search keyword relevant to your inventory
-        filter: `sellers:{${EBAY_SELLER_ID}},buyingOptions:{FIXED_PRICE|AUCTION}`,
+        q: encodeURIComponent("watch OR Cartier"),  // Properly encoded with OR operator
+        filter: encodeURIComponent(`sellers:{${EBAY_SELLER_ID}}`),
         limit: limit,
         offset: offset,
         fieldgroups: 'FULL'
