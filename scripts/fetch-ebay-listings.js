@@ -32,16 +32,56 @@ const FINDING_API_URL = 'https://svcs.ebay.com/services/search/FindingService/v1
 // Helper function to delay execution (for rate limiting)
 const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
-// Function to fetch listings with retry logic
-async function fetchSellerListingsWithRetry(maxRetries = 3, initialDelay = 5000) {
+// Main function to fetch all listings with pagination support
+async function fetchAllSellerListings(maxRetries = 3, initialDelay = 5000) {
+  let allListings = [];
+  let offset = 0;
+  const limit = 50; // Maximum allowed by eBay API
+  let hasMorePages = true;
+  
+  console.log('Starting to fetch all listings with pagination');
+  
+  while (hasMorePages) {
+    try {
+      const results = await fetchSellerListingsPage(offset, limit, maxRetries, initialDelay);
+      
+      if (!results || !results.itemSummaries || results.itemSummaries.length === 0) {
+        console.log('No more results found or empty response');
+        hasMorePages = false;
+        break;
+      }
+      
+      console.log(`Fetched ${results.itemSummaries.length} listings from offset ${offset}`);
+      allListings = allListings.concat(results.itemSummaries);
+      
+      // Check if we need to fetch more pages
+      if (results.total && offset + limit < results.total) {
+        offset += limit;
+        console.log(`Moving to next page, offset: ${offset}`);
+        // Add a delay between pagination requests to avoid rate limiting
+        await delay(1000);
+      } else {
+        hasMorePages = false;
+      }
+    } catch (error) {
+      console.error('Error during pagination:', error.message);
+      hasMorePages = false;
+    }
+  }
+  
+  console.log(`Total listings fetched: ${allListings.length}`);
+  return { itemSummaries: allListings };
+}
+
+// Function to fetch a single page of listings
+async function fetchSellerListingsPage(offset = 0, limit = 50, maxRetries = 3, initialDelay = 5000) {
   let retries = 0;
   let backoffDelay = initialDelay;
   
   while (retries <= maxRetries) {
     try {
-      console.log(`Fetching listings for seller: ${EBAY_SELLER_ID} (Attempt ${retries + 1}/${maxRetries + 1})`);
+      console.log(`Fetching listings for seller: ${EBAY_SELLER_ID} (Page offset: ${offset}, Attempt ${retries + 1}/${maxRetries + 1})`);
       
-      // Use the Browse API search endpoint
       if (!oauthToken) {
         console.error('OAuth token is required for Browse API. Please complete the OAuth flow.');
         return createMockData();
@@ -61,12 +101,14 @@ async function fetchSellerListingsWithRetry(maxRetries = 3, initialDelay = 5000)
       }
       console.log('Request headers:', JSON.stringify(logHeaders, null, 2));
       
-      // IMPORTANT FIX: Browse API requires at least one of 'q', 'category_ids', 'charity_ids', 'epid', or 'gtin'
-      // We'll use a broad query and then filter by seller
+      // IMPORTANT CHANGE: Remove the 'q' parameter to get ALL listings
+      // Use category_ids=281 (Jewelry & Watches) as a required parameter instead
+      // This ensures we get all watches without needing a specific search term
       const queryParams = {
-        limit: 50,
-        q: 'watch', // Adding a query parameter is required
+        category_ids: '281', // Jewelry & Watches category
         filter: `sellers:{${EBAY_SELLER_ID}}`,
+        limit: limit,
+        offset: offset,
         fieldgroups: 'FULL'
       };
       
@@ -82,9 +124,9 @@ async function fetchSellerListingsWithRetry(maxRetries = 3, initialDelay = 5000)
       });
       
       console.log('Successfully received Browse API response');
+      console.log(`Total results reported by API: ${response.data.total || 'unknown'}`);
       
-      // Process the JSON response
-      return processBrowseApiResponse(response.data);
+      return response.data;
       
     } catch (error) {
       console.error(`Error fetching seller listings (Attempt ${retries + 1}/${maxRetries + 1}):`, error.message);
@@ -205,7 +247,7 @@ async function fetchFullItemDetails(itemIds) {
   return itemDetails;
 }
 
-// Function to process Browse API response
+// Process Browse API response - enhanced to include auction format info and handle ended listings
 async function processBrowseApiResponse(apiResponse) {
   try {
     // Check if we have items
@@ -242,6 +284,15 @@ async function processBrowseApiResponse(apiResponse) {
         // Get full details if available
         const fullDetail = detailsMap[itemId];
         
+        // Check if listing has ended
+        const hasEnded = item.itemEndDate ? new Date(item.itemEndDate) < new Date() : false;
+        
+        // Skip ended listings
+        if (hasEnded) {
+          console.log(`Skipping ended listing: ${item.title} (${itemId})`);
+          return null;
+        }
+        
         // Extract image URL
         let imageUrl = 'https://placehold.co/600x400/gold/white?text=No+Image';
         if (item.image && item.image.imageUrl) {
@@ -263,6 +314,14 @@ async function processBrowseApiResponse(apiResponse) {
         
         // Create specifics array from item aspects
         const specifics = [];
+        
+        // Add listing format (Auction vs Buy It Now)
+        if (item.buyingOptions) {
+          specifics.push({
+            name: 'Listing Format',
+            value: item.buyingOptions.includes('AUCTION') ? 'Auction' : 'Buy It Now'
+          });
+        }
         
         // Add condition if available
         if (item.condition) {
@@ -287,6 +346,14 @@ async function processBrowseApiResponse(apiResponse) {
               name: aspect.name,
               value: aspect.value
             });
+          });
+        }
+        
+        // Add auction end time if applicable
+        if (item.buyingOptions && item.buyingOptions.includes('AUCTION') && item.itemEndDate) {
+          specifics.push({
+            name: 'Auction End Date',
+            value: new Date(item.itemEndDate).toLocaleString()
           });
         }
         
@@ -321,6 +388,8 @@ async function processBrowseApiResponse(apiResponse) {
         return null;
       }
     }).filter(item => item !== null);
+    
+    console.log(`Processed ${processedItems.length} active listings (filtered out ${items.length - processedItems.length} ended listings)`);
     
     return { itemSummaries: processedItems };
   } catch (error) {
@@ -398,11 +467,11 @@ function createMockData() {
   };
 }
 
-// Main function
+// Main function - updated to use pagination
 async function main() {
   try {
-    // Fetch listings with retry logic
-    const listings = await fetchSellerListingsWithRetry();
+    // Fetch ALL listings with pagination support
+    const listings = await fetchAllSellerListings();
     
     if (!listings || !listings.itemSummaries || listings.itemSummaries.length === 0) {
       console.log('No listings found for the seller, using mock data');
@@ -412,10 +481,12 @@ async function main() {
       return;
     }
     
-    console.log(`Successfully processed ${listings.itemSummaries.length} listings`);
+    // Process the listings to include full details and filter ended listings
+    const processedListings = await processBrowseApiResponse(listings);
+    console.log(`Successfully processed ${processedListings.itemSummaries.length} listings`);
     
     // Save to JSON file
-    fs.writeFileSync('listings.json', JSON.stringify(listings, null, 2));
+    fs.writeFileSync('listings.json', JSON.stringify(processedListings, null, 2));
     
     console.log('Successfully saved listings to listings.json');
   } catch (error) {
