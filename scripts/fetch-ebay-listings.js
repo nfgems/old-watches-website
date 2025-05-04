@@ -101,9 +101,9 @@ async function fetchSellerListingsPage(offset = 0, limit = 50, maxRetries = 3, i
       }
       console.log('Request headers:', JSON.stringify(logHeaders, null, 2));
       
-      // CRITICAL FIX: Include both FIXED_PRICE and AUCTION buying options
-      // Remove the category filter to get ALL listings regardless of category
+      // CRITICAL FIX: Add a search query parameter
       const queryParams = {
+        q: "watch", // Add a search keyword relevant to your inventory
         filter: `sellers:{${EBAY_SELLER_ID}},buyingOptions:{FIXED_PRICE|AUCTION}`,
         limit: limit,
         offset: offset,
