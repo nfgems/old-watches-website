@@ -7,9 +7,17 @@ document.addEventListener('DOMContentLoaded', () => {
   const sortSelect = document.getElementById('sort-select');
   const backToTopButton = document.getElementById('back-to-top');
   
+  // Add view toggle buttons
+  const horizontalViewBtn = document.getElementById('horizontal-view-btn');
+  const gridViewBtn = document.getElementById('grid-view-btn');
+  
   let allListings = []; // Store all listings for filtering
   let currentCategory = 'all'; // Track current category filter
   let currentSort = 'default'; // Track current sort option
+  let currentView = 'horizontal'; // Track current view mode (horizontal or grid)
+  
+  // Initialize view from localStorage or default to horizontal
+  initializeView();
   
   // Fetch the pre-generated JSON file with eBay listings
   fetchListingsFromJson()
@@ -18,8 +26,81 @@ document.addEventListener('DOMContentLoaded', () => {
       renderListings(data);
       setupCategoryFilters();
       setupSortFilter();
+      setupViewToggle(); // Add view toggle functionality
     })
     .catch(handleError);
+  
+  // Function to initialize view based on localStorage
+  function initializeView() {
+    // Try to get saved view preference
+    const savedView = localStorage.getItem('oldWatchesViewMode');
+    if (savedView) {
+      currentView = savedView;
+      
+      // Set the correct toggle button as active
+      if (currentView === 'grid') {
+        horizontalViewBtn.classList.remove('active');
+        gridViewBtn.classList.add('active');
+        listingsContainer.classList.add('grid-view');
+        listingsContainer.classList.remove('horizontal-view');
+      } else {
+        horizontalViewBtn.classList.add('active');
+        gridViewBtn.classList.remove('active');
+        listingsContainer.classList.add('horizontal-view');
+        listingsContainer.classList.remove('grid-view');
+      }
+    } else {
+      // Default to horizontal view
+      listingsContainer.classList.add('horizontal-view');
+    }
+  }
+  
+  // Function to setup view toggle
+  function setupViewToggle() {
+    horizontalViewBtn.addEventListener('click', () => {
+      if (currentView !== 'horizontal') {
+        // Update active button
+        horizontalViewBtn.classList.add('active');
+        gridViewBtn.classList.remove('active');
+        
+        // Update view classes
+        listingsContainer.classList.add('horizontal-view');
+        listingsContainer.classList.remove('grid-view');
+        
+        // Update cards to horizontal layout
+        const cards = document.querySelectorAll('.listing-card');
+        cards.forEach(card => {
+          card.classList.add('horizontal');
+        });
+        
+        // Save preference
+        currentView = 'horizontal';
+        localStorage.setItem('oldWatchesViewMode', currentView);
+      }
+    });
+    
+    gridViewBtn.addEventListener('click', () => {
+      if (currentView !== 'grid') {
+        // Update active button
+        gridViewBtn.classList.add('active');
+        horizontalViewBtn.classList.remove('active');
+        
+        // Update view classes
+        listingsContainer.classList.add('grid-view');
+        listingsContainer.classList.remove('horizontal-view');
+        
+        // Remove horizontal class from cards
+        const cards = document.querySelectorAll('.listing-card');
+        cards.forEach(card => {
+          card.classList.remove('horizontal');
+        });
+        
+        // Save preference
+        currentView = 'grid';
+        localStorage.setItem('oldWatchesViewMode', currentView);
+      }
+    });
+  }
   
   // Function to fetch listings from the pre-generated JSON file
   async function fetchListingsFromJson() {
@@ -331,7 +412,8 @@ document.addEventListener('DOMContentLoaded', () => {
       }
       
       const card = document.createElement('div');
-      card.className = `listing-card ${category}`;
+      // Add horizontal class if current view is horizontal
+      card.className = `listing-card ${category} ${currentView === 'horizontal' ? 'horizontal' : ''}`;
       
       // Get the main image or use placeholder
       let imageUrl = '';
