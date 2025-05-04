@@ -101,10 +101,10 @@ async function fetchSellerListingsPage(offset = 0, limit = 50, maxRetries = 3, i
       }
       console.log('Request headers:', JSON.stringify(logHeaders, null, 2));
       
-      // UPDATED FIX: Use an empty search query to get ALL listings
+      // UPDATED FIX: Use category_ids for watches (14324)
       const queryParams = {
-        q: "", // Empty search query will return everything
-        filter: `sellers:{${EBAY_SELLER_ID}},buyingOptions:{FIXED_PRICE|AUCTION}`,
+        category_ids: "14324", // Watches category ID
+        filter: `sellers:{${EBAY_SELLER_ID}}`,
         limit: limit,
         offset: offset,
         fieldgroups: 'FULL'
