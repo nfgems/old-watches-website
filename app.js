@@ -182,7 +182,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
   
-  // Enhanced mock listings function with manual/digital watch data
+  // Enhanced mock listings function with manual/digital/quartz watch data
   async function fetchMockListings() {
     // Simulate network delay
     await new Promise(resolve => setTimeout(resolve, 1000));
@@ -322,6 +322,28 @@ document.addEventListener('DOMContentLoaded', () => {
             { name: 'Style', value: 'LED Display' },
             { name: 'Listing Date', value: '2025-04-10' }
           ]
+        },
+        {
+          itemId: '889977665',
+          title: 'Seiko SKX007 Automatic Dive Watch',
+          image: {
+            imageUrl: 'https://placehold.co/600x400/4a90e2/fff?text=Seiko+SKX007'
+          },
+          price: {
+            value: '349.99',
+            currency: 'USD'
+          },
+          itemWebUrl: 'https://www.ebay.com/itm/889977665',
+          shortDescription: 'Classic Seiko SKX007 dive watch. Excellent condition with original box and papers.',
+          fullDescription: 'Classic Seiko SKX007 dive watch in excellent condition with original box and papers. This iconic diver features the reliable 7S26 automatic movement, a unidirectional rotating bezel, and 200m of water resistance. The 42mm case sits perfectly on the wrist with the Jubilee bracelet. The black dial with luminous markers is in pristine condition with no scratches or blemishes. A perfect everyday watch with a rich heritage of quality and reliability.',
+          specifics: [
+            { name: 'Brand', value: 'Seiko' },
+            { name: 'Model', value: 'SKX007' },
+            { name: 'Year', value: '2019' },
+            { name: 'Type', value: 'Quartz' },
+            { name: 'Water Resistance', value: '200m' },
+            { name: 'Listing Date', value: '2025-04-05' }
+          ]
         }
       ]
     };
@@ -380,7 +402,7 @@ document.addEventListener('DOMContentLoaded', () => {
           return true;
         }
         
-        // Then check if title contains "digital" or "ana-digi" for digital category
+        // For digital category
         if (currentCategory.toLowerCase() === 'digital' && 
            (item.title.toLowerCase().includes('digital') || 
             item.title.toLowerCase().includes('ana-digi') ||
@@ -388,11 +410,29 @@ document.addEventListener('DOMContentLoaded', () => {
           return true;
         }
         
-        // Default to manual category if not digital
-        return currentCategory.toLowerCase() === 'manual' && 
-               !item.title.toLowerCase().includes('digital') && 
-               !item.title.toLowerCase().includes('ana-digi') &&
-               !item.title.toLowerCase().includes('ana digi');
+        // For manual category
+        if (currentCategory.toLowerCase() === 'manual' && 
+            item.title.toLowerCase().includes('manual')) {
+          return true;
+        }
+        
+        // For quartz category - if not digital or manual and doesn't contain specific brands
+        if (currentCategory.toLowerCase() === 'quartz') {
+          const title = item.title.toLowerCase();
+          // Check if it doesn't contain any of the excluded terms
+          const hasDigitalTerms = title.includes('digital') || 
+                                 title.includes('ana-digi') || 
+                                 title.includes('ana digi');
+          const hasManualTerm = title.includes('manual');
+          const hasSpecificBrands = title.includes('elgin') || 
+                                   title.includes('waltham') || 
+                                   title.includes('illinois');
+          
+          // If it doesn't have any of the excluded terms, it falls under quartz
+          return !hasDigitalTerms && !hasManualTerm && !hasSpecificBrands;
+        }
+        
+        return false;
       });
     }
     
@@ -505,21 +545,8 @@ document.addEventListener('DOMContentLoaded', () => {
   // Function to render an array of listings
   function renderListingsArray(listings) {
     listings.forEach(item => {
-      // Determine if this is a manual or digital watch
-      let category = 'manual'; // Default to manual
-      
-      // Check if title contains "digital" or "ana-digi"
-      if (item.title.toLowerCase().includes('digital') || 
-          item.title.toLowerCase().includes('ana-digi') ||
-          item.title.toLowerCase().includes('ana digi')) {
-        category = 'digital';
-      } else if (item.specifics && item.specifics.length > 0) {
-        // Check for Type specific
-        const typeSpecific = item.specifics.find(spec => spec.name === 'Type');
-        if (typeSpecific && typeSpecific.value.toLowerCase() === 'digital') {
-          category = 'digital';
-        }
-      }
+      // Determine the category of the watch (manual, digital, or quartz)
+      let category = determineWatchCategory(item);
       
       const card = document.createElement('div');
       // Add horizontal class if current view is horizontal
@@ -529,8 +556,10 @@ document.addEventListener('DOMContentLoaded', () => {
       let imageUrl = '';
       if (category === 'manual') {
         imageUrl = item.image?.imageUrl || 'https://placehold.co/600x400/b29059/fff?text=Manual+Watch';
-      } else {
+      } else if (category === 'digital') {
         imageUrl = item.image?.imageUrl || 'https://placehold.co/600x400/ff5987/fff?text=Digital+Watch';
+      } else { // quartz
+        imageUrl = item.image?.imageUrl || 'https://placehold.co/600x400/4a90e2/fff?text=Quartz+Watch';
       }
       
       // Format specifics if available, excluding Type and Listing Date which we don't want to display
@@ -566,9 +595,12 @@ document.addEventListener('DOMContentLoaded', () => {
         highlightedSpecifics = highlightedSpecifics.replace(regex, '<span class="search-highlight">$1</span>');
       }
       
+      // Get category display name
+      const categoryDisplayName = getCategoryDisplayName(category);
+      
       // Create HTML for item card with category badge and read more/less functionality
       card.innerHTML = `
-        <div class="category-badge ${category}">${category === 'manual' ? 'Manual' : 'Digital'}</div>
+        <div class="category-badge ${category}">${categoryDisplayName}</div>
         <div class="listing-image">
           <img src="${imageUrl}" alt="${item.title}">
         </div>
@@ -612,6 +644,47 @@ document.addEventListener('DOMContentLoaded', () => {
         top: 0,
         behavior: 'smooth'
       });
+    }
+  }
+  
+  // Function to determine watch category (manual, digital, or quartz)
+  function determineWatchCategory(item) {
+    const title = item.title.toLowerCase();
+    
+    // Check for digital first
+    if (title.includes('digital') || 
+        title.includes('ana-digi') || 
+        title.includes('ana digi')) {
+      return 'digital';
+    }
+    
+    // Then check for manual
+    if (title.includes('manual')) {
+      return 'manual';
+    }
+    
+    // Check for specific brands that should be in manual category
+    if (title.includes('elgin') || 
+        title.includes('waltham') || 
+        title.includes('illinois')) {
+      return 'manual';
+    }
+    
+    // Otherwise, categorize as quartz
+    return 'quartz';
+  }
+  
+  // Function to get display name for category
+  function getCategoryDisplayName(category) {
+    switch(category) {
+      case 'manual':
+        return 'Manual';
+      case 'digital':
+        return 'Digital';
+      case 'quartz':
+        return 'Quartz';
+      default:
+        return category.charAt(0).toUpperCase() + category.slice(1);
     }
   }
   
