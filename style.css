@@ -3,8 +3,6 @@
   --secondary-color: #b29059;
   --digital-accent: #ff5987;
   --digital-secondary: #22dddd;
-  --quartz-accent: #4a90e2;
-  --quartz-secondary: #2c3e50;
   --text-color: #333;
   --light-text: #fff;
   --off-white: #f8f5f0;
@@ -238,11 +236,6 @@ nav {
   color: black;
 }
 
-.listing-card.quartz .search-highlight {
-  background-color: rgba(74, 144, 226, 0.3);
-  color: black;
-}
-
 /* Category filters */
 .category-filters {
   display: flex;
@@ -275,16 +268,6 @@ nav {
 .category-button.digital:hover, .category-button.digital.active {
   background-color: var(--digital-secondary);
   color: black;
-}
-
-.category-button.quartz {
-  background-color: var(--quartz-accent);
-  border-color: var(--quartz-secondary);
-}
-
-.category-button.quartz:hover, .category-button.quartz.active {
-  background-color: var(--quartz-secondary);
-  color: white;
 }
 
 /* Sort filter */
@@ -416,12 +399,6 @@ nav {
   border-radius: 0;
 }
 
-.listing-card.quartz {
-  border: 1px solid var(--quartz-accent);
-  box-shadow: 0 4px 15px rgba(74, 144, 226, 0.3);
-  border-radius: 6px;
-}
-
 .listing-card:hover {
   transform: translateY(-5px);
   box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
@@ -429,11 +406,6 @@ nav {
 
 .listing-card.digital:hover {
   transform: translateY(-5px) rotate(1deg);
-}
-
-.listing-card.quartz:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 10px 20px rgba(74, 144, 226, 0.4);
 }
 
 /* Horizontal card layout */
@@ -479,13 +451,6 @@ nav {
   transform: rotate(3deg);
 }
 
-.category-badge.quartz {
-  background-color: var(--quartz-accent);
-  color: white;
-  border-radius: 20px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-}
-
 /* Image container */
 .listing-image {
   height: 240px;
@@ -528,18 +493,6 @@ nav {
   pointer-events: none;
 }
 
-.listing-card.quartz .listing-image::before {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: linear-gradient(to bottom, rgba(74,144,226,0.1) 0%, rgba(44,62,80,0.2) 100%);
-  z-index: 1;
-  pointer-events: none;
-}
-
 /* Listing details */
 .listing-details {
   padding: 1.5rem;
@@ -557,11 +510,6 @@ nav {
 .listing-card.digital .listing-details {
   background-color: white;
   background-image: url('https://www.transparenttextures.com/patterns/tiny-grid.png');
-}
-
-.listing-card.quartz .listing-details {
-  background-color: white;
-  border-top: 1px solid rgba(74, 144, 226, 0.2);
 }
 
 .listing-details h2 {
@@ -589,12 +537,6 @@ nav {
   color: var(--digital-accent);
 }
 
-.listing-card.quartz .listing-details h2 {
-  font-family: var(--modern-font);
-  color: var(--quartz-secondary);
-  font-weight: 600;
-}
-
 /* Price display */
 .price {
   font-size: 1.6rem;
@@ -615,14 +557,6 @@ nav {
   background-color: black;
   color: white;
   transform: rotate(-2deg);
-}
-
-.listing-card.quartz .price {
-  color: var(--quartz-accent);
-  font-family: var(--modern-font);
-  padding: 0.2rem 0;
-  border-bottom: 2px solid var(--quartz-accent);
-  display: inline-block;
 }
 
 /* Item specifications */
@@ -648,11 +582,6 @@ nav {
 
 .listing-card.digital .item-specifics {
   font-family: 'Courier New', Courier, monospace;
-}
-
-.listing-card.quartz .item-specifics {
-  font-family: var(--modern-font);
-  line-height: 1.5;
 }
 
 /* Description read more/less styles */
@@ -689,14 +618,6 @@ nav {
   font-size: 0.8rem;
 }
 
-.listing-card.quartz .read-more-link,
-.listing-card.quartz .read-less-link {
-  color: var(--quartz-accent);
-  font-weight: 600;
-  font-size: 0.85rem;
-  text-transform: capitalize;
-}
-
 .listing-card.manual .read-more-link:hover, 
 .listing-card.manual .read-less-link:hover {
   color: var(--primary-color);
@@ -707,12 +628,6 @@ nav {
 .listing-card.digital .read-less-link:hover {
   color: var(--digital-secondary);
   text-decoration: none;
-}
-
-.listing-card.quartz .read-more-link:hover,
-.listing-card.quartz .read-less-link:hover {
-  color: var(--quartz-secondary);
-  text-decoration: underline;
 }
 
 /* View button */
@@ -746,22 +661,6 @@ nav {
 .listing-card.digital .view-button:hover {
   background-color: var(--digital-secondary);
   color: black;
-}
-
-.listing-card.quartz .view-button {
-  background-color: var(--quartz-accent);
-  border-radius: 30px;
-  border: none;
-  font-family: var(--modern-font);
-  font-weight: 600;
-  text-transform: capitalize;
-  letter-spacing: 0.5px;
-  box-shadow: 0 2px 5px rgba(74, 144, 226, 0.3);
-}
-
-.listing-card.quartz .view-button:hover {
-  background-color: var(--quartz-secondary);
-  box-shadow: 0 3px 8px rgba(74, 144, 226, 0.5);
 }
 
 /* No results message */
