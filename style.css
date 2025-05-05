@@ -5,6 +5,8 @@
   --digital-secondary: #22dddd;
   --quartz-accent: #4a90e2;
   --quartz-secondary: #2c3e50;
+  --automatic-accent: #8a5928;
+  --automatic-secondary: #5a3918;
   --text-color: #333;
   --light-text: #fff;
   --off-white: #f8f5f0;
@@ -243,6 +245,11 @@ nav {
   color: black;
 }
 
+.listing-card.automatic .search-highlight {
+  background-color: rgba(138, 89, 40, 0.3);
+  color: black;
+}
+
 /* Category filters */
 .category-filters {
   display: flex;
@@ -265,6 +272,16 @@ nav {
 .category-button:hover, .category-button.active {
   background-color: var(--secondary-color);
   color: var(--primary-color);
+}
+
+.category-button.automatic {
+  background-color: var(--automatic-accent);
+  border-color: var(--automatic-secondary);
+}
+
+.category-button.automatic:hover, .category-button.automatic.active {
+  background-color: var(--automatic-secondary);
+  color: white;
 }
 
 .category-button.digital {
@@ -410,6 +427,12 @@ nav {
   border: 1px solid var(--secondary-color);
 }
 
+.listing-card.automatic {
+  border: 2px solid var(--automatic-accent);
+  box-shadow: 0 4px 15px rgba(138, 89, 40, 0.3);
+  border-radius: 6px;
+}
+
 .listing-card.digital {
   border: 2px solid var(--digital-accent);
   box-shadow: 5px 5px 0 rgba(0, 0, 0, 0.8);
@@ -425,6 +448,11 @@ nav {
 .listing-card:hover {
   transform: translateY(-5px);
   box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+}
+
+.listing-card.automatic:hover {
+  transform: translateY(-5px) scale(1.02);
+  box-shadow: 0 10px 20px rgba(138, 89, 40, 0.4);
 }
 
 .listing-card.digital:hover {
@@ -472,6 +500,14 @@ nav {
   color: var(--primary-color);
 }
 
+.category-badge.automatic {
+  background-color: var(--automatic-accent);
+  color: white;
+  border-radius: 4px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  transform: rotate(-2deg);
+}
+
 .category-badge.digital {
   background-color: var(--digital-accent);
   color: white;
@@ -516,6 +552,18 @@ nav {
   pointer-events: none;
 }
 
+.listing-card.automatic .listing-image::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(to right, rgba(138,89,40,0.2) 0%, rgba(90,57,24,0.2) 100%);
+  z-index: 1;
+  pointer-events: none;
+}
+
 .listing-card.digital .listing-image::before {
   content: "";
   position: absolute;
@@ -554,6 +602,12 @@ nav {
   border-top: 1px solid var(--card-border);
 }
 
+.listing-card.automatic .listing-details {
+  background-color: var(--off-white);
+  border-top: 1px solid var(--automatic-accent);
+  background-image: url('https://www.transparenttextures.com/patterns/paper.png');
+}
+
 .listing-card.digital .listing-details {
   background-color: white;
   background-image: url('https://www.transparenttextures.com/patterns/tiny-grid.png');
@@ -583,6 +637,12 @@ nav {
   color: var(--primary-color);
 }
 
+.listing-card.automatic .listing-details h2 {
+  font-family: Georgia, serif;
+  color: var(--automatic-secondary);
+  font-weight: bold;
+}
+
 .listing-card.digital .listing-details h2 {
   font-family: 'Arial Black', Gadget, sans-serif;
   text-transform: uppercase;
@@ -605,6 +665,15 @@ nav {
 .listing-card.manual .price {
   color: var(--secondary-color);
   font-family: var(--vintage-font);
+}
+
+.listing-card.automatic .price {
+  color: var(--automatic-accent);
+  font-family: Georgia, serif;
+  position: relative;
+  display: inline-block;
+  padding: 0.2rem 0;
+  border-bottom: 2px dotted var(--automatic-accent);
 }
 
 .listing-card.digital .price {
@@ -646,6 +715,11 @@ nav {
   font-style: italic;
 }
 
+.listing-card.automatic .item-specifics {
+  font-family: Georgia, serif;
+  line-height: 1.5;
+}
+
 .listing-card.digital .item-specifics {
   font-family: 'Courier New', Courier, monospace;
 }
@@ -681,6 +755,13 @@ nav {
   font-style: italic;
 }
 
+.listing-card.automatic .read-more-link,
+.listing-card.automatic .read-less-link {
+  color: var(--automatic-accent);
+  font-family: Georgia, serif;
+  font-style: italic;
+}
+
 .listing-card.digital .read-more-link, 
 .listing-card.digital .read-less-link {
   color: var(--digital-accent);
@@ -700,6 +781,12 @@ nav {
 .listing-card.manual .read-more-link:hover, 
 .listing-card.manual .read-less-link:hover {
   color: var(--primary-color);
+  text-decoration: underline;
+}
+
+.listing-card.automatic .read-more-link:hover,
+.listing-card.automatic .read-less-link:hover {
+  color: var(--automatic-secondary);
   text-decoration: underline;
 }
 
@@ -731,6 +818,20 @@ nav {
 
 .view-button:hover {
   background-color: #8a6c41;
+}
+
+.listing-card.automatic .view-button {
+  background-color: var(--automatic-accent);
+  border-radius: 6px;
+  border: 1px solid var(--automatic-secondary);
+  font-family: Georgia, serif;
+  letter-spacing: 0.5px;
+  box-shadow: 0 2px 5px rgba(138, 89, 40, 0.3);
+}
+
+.listing-card.automatic .view-button:hover {
+  background-color: var(--automatic-secondary);
+  box-shadow: 0 3px 8px rgba(138, 89, 40, 0.5);
 }
 
 .listing-card.digital .view-button {
@@ -894,8 +995,7 @@ footer a:hover {
   .sort-select {
     width: 100%;
   }
-  
-  .view-toggle-container {
+.view-toggle-container {
     margin-left: 0;
     justify-content: center;
     margin-top: 1rem;
