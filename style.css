@@ -198,6 +198,60 @@ nav {
   color: #333;
 }
 
+/* Add search suggestions styles */
+.search-suggestions {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background-color: white;
+  border: 1px solid var(--card-border);
+  border-top: none;
+  border-radius: 0 0 4px 4px;
+  max-height: 200px;
+  overflow-y: auto;
+  z-index: 10;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+  display: none;
+}
+
+.search-suggestion {
+  padding: 10px 15px;
+  cursor: pointer;
+  border-bottom: 1px solid #eee;
+  transition: background-color 0.2s;
+}
+
+.search-suggestion:hover,
+.search-suggestion.selected {
+  background-color: var(--off-white);
+}
+
+.suggestion-category {
+  display: inline-block;
+  font-size: 0.8rem;
+  padding: 2px 6px;
+  margin-left: 5px;
+  border-radius: 4px;
+  color: white;
+}
+
+.suggestion-category.manual {
+  background-color: var(--secondary-color);
+}
+
+.suggestion-category.automatic {
+  background-color: var(--automatic-accent);
+}
+
+.suggestion-category.digital {
+  background-color: var(--digital-accent);
+}
+
+.suggestion-category.quartz {
+  background-color: var(--quartz-accent);
+}
+
 .search-results-info {
   width: 100%;
   display: flex;
@@ -332,7 +386,6 @@ nav {
 .sort-select:focus {
   border-color: var(--digital-accent);
 }
-
 /* View toggle container */
 .view-toggle-container {
   display: flex;
@@ -622,11 +675,6 @@ nav {
   font-size: 1.4rem;
   margin-bottom: 0.5rem;
   line-height: 1.4;
-  /* Removed the following truncation properties */
-  /* overflow: hidden; */
-  /* display: -webkit-box; */
-  /* -webkit-line-clamp: 2; */
-  /* -webkit-box-orient: vertical; */
   word-wrap: break-word;
   overflow-wrap: break-word;
   width: 100%;
@@ -915,7 +963,6 @@ footer a {
 footer a:hover {
   color: var(--light-text);
 }
-
 /* Back to top button */
 .back-to-top {
   position: fixed;
@@ -995,7 +1042,8 @@ footer a:hover {
   .sort-select {
     width: 100%;
   }
-.view-toggle-container {
+  
+  .view-toggle-container {
     margin-left: 0;
     justify-content: center;
     margin-top: 1rem;
@@ -1030,6 +1078,16 @@ footer a:hover {
   
   .listing-card.horizontal .listing-details {
     max-height: none;
+  }
+  
+  /* Make sure search suggestions work on mobile */
+  .search-suggestions {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    max-height: 200px;
+    z-index: 20; /* Higher z-index to ensure visibility */
   }
 }
 
