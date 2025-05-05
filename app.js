@@ -412,7 +412,14 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // For manual category
         if (currentCategory.toLowerCase() === 'manual' && 
-            item.title.toLowerCase().includes('manual')) {
+            (item.title.toLowerCase().includes('manual') ||
+             item.title.toLowerCase().includes('rolex') ||
+             item.title.toLowerCase().includes('rolco') ||
+             item.title.toLowerCase().includes('cartier') ||
+             item.title.toLowerCase().includes('military') ||
+             item.title.toLowerCase().includes('elgin') || 
+             item.title.toLowerCase().includes('waltham') || 
+             item.title.toLowerCase().includes('illinois'))) {
           return true;
         }
         
@@ -423,13 +430,17 @@ document.addEventListener('DOMContentLoaded', () => {
           const hasDigitalTerms = title.includes('digital') || 
                                  title.includes('ana-digi') || 
                                  title.includes('ana digi');
-          const hasManualTerm = title.includes('manual');
-          const hasSpecificBrands = title.includes('elgin') || 
-                                   title.includes('waltham') || 
-                                   title.includes('illinois');
+          const hasManualTerms = title.includes('manual') ||
+                                title.includes('rolex') ||
+                                title.includes('rolco') ||
+                                title.includes('cartier') ||
+                                title.includes('military') ||
+                                title.includes('elgin') || 
+                                title.includes('waltham') || 
+                                title.includes('illinois');
           
           // If it doesn't have any of the excluded terms, it falls under quartz
-          return !hasDigitalTerms && !hasManualTerm && !hasSpecificBrands;
+          return !hasDigitalTerms && !hasManualTerms;
         }
         
         return false;
@@ -658,13 +669,13 @@ document.addEventListener('DOMContentLoaded', () => {
       return 'digital';
     }
     
-    // Then check for manual
-    if (title.includes('manual')) {
-      return 'manual';
-    }
-    
-    // Check for specific brands that should be in manual category
-    if (title.includes('elgin') || 
+    // Then check for manual watches - including Rolex, Rolco, Cartier, Military, and existing brands
+    if (title.includes('manual') || 
+        title.includes('rolex') ||
+        title.includes('rolco') ||
+        title.includes('cartier') ||
+        title.includes('military') ||
+        title.includes('elgin') || 
         title.includes('waltham') || 
         title.includes('illinois')) {
       return 'manual';
