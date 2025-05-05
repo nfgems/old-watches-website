@@ -35,6 +35,8 @@ document.addEventListener('DOMContentLoaded', () => {
   // Fetch the pre-generated JSON file with eBay listings
   fetchListingsFromJson()
     .then(data => {
+      console.log('Fetched data:', data);
+      console.log('Number of listings:', data.itemSummaries ? data.itemSummaries.length : 0);
       allListings = data;
       renderListings(data);
       setupCategoryFilters();
@@ -175,8 +177,7 @@ document.addEventListener('DOMContentLoaded', () => {
         hideSearchSuggestions();
       }
     });
-    
-    // Hide suggestions when clicking outside
+// Hide suggestions when clicking outside
     document.addEventListener('click', (e) => {
       if (!searchInput.contains(e.target) && !searchSuggestionsEl.contains(e.target)) {
         hideSearchSuggestions();
@@ -392,12 +393,23 @@ document.addEventListener('DOMContentLoaded', () => {
   // Function to fetch listings from the pre-generated JSON file
   async function fetchListingsFromJson() {
     try {
+      console.log('Attempting to fetch listings.json...');
       const response = await fetch('listings.json');
       if (!response.ok) {
+        console.error('Response not OK:', response.status, response.statusText);
         throw new Error('Failed to fetch listings data');
       }
       
-      return await response.json();
+      const data = await response.json();
+      console.log('Successfully parsed JSON data');
+      
+      // Verify data structure
+      if (!data.itemSummaries || !Array.isArray(data.itemSummaries)) {
+        console.error('Invalid data structure:', data);
+        throw new Error('Invalid listings data structure');
+      }
+      
+      return data;
     } catch (error) {
       console.error('Error fetching listings JSON:', error);
       
@@ -406,7 +418,8 @@ document.addEventListener('DOMContentLoaded', () => {
       return fetchMockListings();
     }
   }
-// Enhanced mock listings function with manual/digital/quartz/automatic watch data
+  
+  // Enhanced mock listings function with manual/digital/quartz/automatic watch data
   async function fetchMockListings() {
     // Simulate network delay
     await new Promise(resolve => setTimeout(resolve, 1000));
@@ -436,8 +449,49 @@ document.addEventListener('DOMContentLoaded', () => {
             { name: 'Listing Date', value: '2025-04-15' }
           ]
         },
-        // Other watch listings from mock data...
-        // Note: In production, this would contain all the watches from the mock data
+        {
+          itemId: '987654321',
+          title: 'Vintage Rolex Oyster WW2 Military Men\'s Manual Watch - Serviced & Running',
+          image: {
+            imageUrl: 'https://placehold.co/600x400/b29059/fff?text=Rolex+Oyster'
+          },
+          price: {
+            value: '799.00',
+            currency: 'USD'
+          },
+          itemWebUrl: 'https://www.ebay.com/itm/987654321',
+          shortDescription: 'For sale is a remarkable piece of horological history: a genuine Rolex-built Oyster from the World War II era.',
+          fullDescription: 'For sale is a remarkable piece of horological history: a genuine Rolex-built Oyster from the World War II era. Produced circa 1944–1945, this timepiece boasts an all-original design with military styling. The watch has been professionally serviced and is in excellent running condition.',
+          specifics: [
+            { name: 'Brand', value: 'Rolex' },
+            { name: 'Model', value: 'Oyster' },
+            { name: 'Year', value: '1940s' },
+            { name: 'Movement', value: 'Manual' },
+            { name: 'Type', value: 'Manual' },
+            { name: 'Condition', value: 'Pre-owned' }
+          ]
+        },
+        {
+          itemId: '564738291',
+          title: 'Casio F-91W Digital Watch - Classic Retro Style',
+          image: {
+            imageUrl: 'https://placehold.co/600x400/ff5987/fff?text=Casio+Digital'
+          },
+          price: {
+            value: '24.99',
+            currency: 'USD'
+          },
+          itemWebUrl: 'https://www.ebay.com/itm/564738291',
+          shortDescription: 'Iconic Casio F-91W digital watch in excellent condition. Features alarm, stopwatch, and water resistance.',
+          fullDescription: 'Iconic Casio F-91W digital watch in excellent condition. Features alarm, stopwatch, and water resistance. This classic digital timepiece has remained virtually unchanged since its introduction in 1991 and continues to be one of the most popular digital watches worldwide. Lightweight resin case and strap make it comfortable for everyday wear.',
+          specifics: [
+            { name: 'Brand', value: 'Casio' },
+            { name: 'Model', value: 'F-91W' },
+            { name: 'Year', value: '2023' },
+            { name: 'Type', value: 'Digital' },
+            { name: 'Features', value: 'Alarm, Stopwatch, Backlight' }
+          ]
+        }
       ]
     };
   }
@@ -585,8 +639,11 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
     
+    console.log(`Rendering ${data.itemSummaries.length} listings`);
+    
     // Clear any existing listings
     listingsContainer.innerHTML = '';
+    errorMessage.style.display = 'none';
     
     // Render all listings
     renderListingsArray(data.itemSummaries);
@@ -600,6 +657,7 @@ document.addEventListener('DOMContentLoaded', () => {
   
   // Function to render an array of listings
   function renderListingsArray(listings) {
+    console.log(`Rendering array of ${listings.length} listings`);
     listings.forEach(item => {
       // Determine the category of the watch
       let category = getWatchCategory(item);
@@ -739,6 +797,16 @@ document.addEventListener('DOMContentLoaded', () => {
     loadingMessage.style.display = 'none';
     errorMessage.textContent = 'Unable to load listings. Please try again later.';
     errorMessage.style.display = 'block';
+    
+    // Still try to render mock data even when there's an error
+    fetchMockListings().then(mockData => {
+      allListings = mockData;
+      renderListings(mockData);
+      setupCategoryFilters();
+      setupSortFilter();
+      setupViewToggle();
+      setupSearch();
+    });
   }
   
   // Back to top button functionality
