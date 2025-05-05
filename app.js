@@ -85,6 +85,13 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
   
+  // Helper function to create safe ID for DOM elements
+  function createSafeId(str) {
+    if (!str) return '';
+    // Replace any non-alphanumeric characters with underscores
+    return str.replace(/[^a-zA-Z0-9]/g, '_');
+  }
+  
   // Helper function for highlighting search terms safely
   function highlightSearchTerms(text, searchTerm) {
     if (!text) return '';
@@ -177,7 +184,8 @@ document.addEventListener('DOMContentLoaded', () => {
         hideSearchSuggestions();
       }
     });
-// Hide suggestions when clicking outside
+    
+    // Hide suggestions when clicking outside
     document.addEventListener('click', (e) => {
       if (!searchInput.contains(e.target) && !searchSuggestionsEl.contains(e.target)) {
         hideSearchSuggestions();
@@ -254,7 +262,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Generate suggestions based on titles, brands, and other specifics
     allListings.itemSummaries.forEach(item => {
       // Check title
-      if (item.title.toLowerCase().includes(input)) {
+      if (item.title && item.title.toLowerCase().includes(input)) {
         searchSuggestions.push({
           text: item.title,
           category: getWatchCategory(item)
@@ -659,110 +667,115 @@ document.addEventListener('DOMContentLoaded', () => {
   function renderListingsArray(listings) {
     console.log(`Rendering array of ${listings.length} listings`);
     listings.forEach(item => {
-      // Determine the category of the watch
-      let category = getWatchCategory(item);
-      
-      const card = document.createElement('div');
-      // Add horizontal class if current view is horizontal
-      card.className = `listing-card ${category} ${currentView === 'horizontal' ? 'horizontal' : ''}`;
-      
-      // Get the main image or use placeholder
-      let imageUrl = '';
-      if (category === 'manual') {
-        imageUrl = item.image?.imageUrl || 'https://placehold.co/600x400/b29059/fff?text=Manual+Watch';
-      } else if (category === 'digital') {
-        imageUrl = item.image?.imageUrl || 'https://placehold.co/600x400/ff5987/fff?text=Digital+Watch';
-      } else if (category === 'automatic') {
-        imageUrl = item.image?.imageUrl || 'https://placehold.co/600x400/8a5928/fff?text=Automatic+Watch';
-      } else { // quartz
-        imageUrl = item.image?.imageUrl || 'https://placehold.co/600x400/4a90e2/fff?text=Quartz+Watch';
-      }
-      
-      // Format specifics if available, excluding Type and Listing Date
-      let specificsHtml = '';
-      if (item.specifics && item.specifics.length > 0) {
-        specificsHtml = item.specifics
-          .filter(spec => spec.name !== 'Type' && spec.name !== 'Listing Date')
-          .map(spec => 
-            `<p><strong>${escapeHTML(spec.name)}:</strong> ${escapeHTML(spec.value)}</p>`
-          ).join('');
-      }
-      
-      // Generate unique IDs for this listing's description elements
-      const descriptionId = `desc-${item.itemId}`;
-      const readMoreId = `read-more-${item.itemId}`;
-      const readLessId = `read-less-${item.itemId}`;
-      
-      // Create the short description and full description elements
-      const shortDescription = item.shortDescription || '';
-      const fullDescription = item.fullDescription || item.shortDescription || '';
-      
-      // Apply highlighting safely if there is a search term
-      let highlightedTitle = escapeHTML(item.title);
-      let highlightedShortDesc = escapeHTML(shortDescription);
-      let highlightedFullDesc = escapeHTML(fullDescription);
-      let highlightedSpecifics = specificsHtml;
-      
-      if (currentSearch.length > 0) {
-        highlightedTitle = highlightSearchTerms(item.title, currentSearch);
-        highlightedShortDesc = highlightSearchTerms(shortDescription, currentSearch);
-        highlightedFullDesc = highlightSearchTerms(fullDescription, currentSearch);
+      try {
+        // Determine the category of the watch
+        let category = getWatchCategory(item);
         
-        // Only highlight in specifics if already generated
-        if (specificsHtml && currentSearch.length > 0) {
-          const regex = new RegExp(`(${escapeHTML(currentSearch)})`, 'gi');
-          highlightedSpecifics = specificsHtml.replace(regex, '<span class="search-highlight">$1</span>');
+        const card = document.createElement('div');
+        // Add horizontal class if current view is horizontal
+        card.className = `listing-card ${category} ${currentView === 'horizontal' ? 'horizontal' : ''}`;
+        
+        // Get the main image or use placeholder
+        let imageUrl = '';
+        if (category === 'manual') {
+          imageUrl = item.image?.imageUrl || 'https://placehold.co/600x400/b29059/fff?text=Manual+Watch';
+        } else if (category === 'digital') {
+          imageUrl = item.image?.imageUrl || 'https://placehold.co/600x400/ff5987/fff?text=Digital+Watch';
+        } else if (category === 'automatic') {
+          imageUrl = item.image?.imageUrl || 'https://placehold.co/600x400/8a5928/fff?text=Automatic+Watch';
+        } else { // quartz
+          imageUrl = item.image?.imageUrl || 'https://placehold.co/600x400/4a90e2/fff?text=Quartz+Watch';
         }
-      }
-      
-      // Get category display name
-      const categoryDisplayName = getCategoryDisplayName(category);
-      
-      // Create HTML for item card with category badge and read more/less functionality
-      card.innerHTML = `
-        <div class="category-badge ${category}">${categoryDisplayName}</div>
-        <div class="listing-image">
-          <img src="${imageUrl}" alt="${escapeHTML(item.title)}">
-        </div>
-        <div class="listing-details">
-          <h2>${highlightedTitle}</h2>
-          <p class="price">${item.price ? item.price.value : '0.00'} ${item.price ? item.price.currency : 'USD'}</p>
-          <div class="item-specifics">
-            <div class="description-short" id="${descriptionId}">
-              <p>${highlightedShortDesc}</p>
-              <a href="#" class="read-more-link" id="${readMoreId}">Read more</a>
-            </div>
-            <div class="description-full" style="display: none;">
-              <p>${highlightedFullDesc}</p>
-              <a href="#" class="read-less-link" id="${readLessId}">Read less</a>
-            </div>
-            ${highlightedSpecifics}
+        
+        // Format specifics if available, excluding Type and Listing Date
+        let specificsHtml = '';
+        if (item.specifics && item.specifics.length > 0) {
+          specificsHtml = item.specifics
+            .filter(spec => spec.name !== 'Type' && spec.name !== 'Listing Date')
+            .map(spec => 
+              `<p><strong>${escapeHTML(spec.name)}:</strong> ${escapeHTML(spec.value)}</p>`
+            ).join('');
+        }
+        
+        // Generate safe unique IDs for this listing's description elements
+        const safeItemId = createSafeId(item.itemId);
+        const descriptionId = `desc-${safeItemId}`;
+        const readMoreId = `read-more-${safeItemId}`;
+        const readLessId = `read-less-${safeItemId}`;
+        
+        // Create the short description and full description elements
+        const shortDescription = item.shortDescription || '';
+        const fullDescription = item.fullDescription || item.shortDescription || '';
+        
+        // Apply highlighting safely if there is a search term
+        let highlightedTitle = escapeHTML(item.title);
+        let highlightedShortDesc = escapeHTML(shortDescription);
+        let highlightedFullDesc = escapeHTML(fullDescription);
+        let highlightedSpecifics = specificsHtml;
+        
+        if (currentSearch.length > 0) {
+          highlightedTitle = highlightSearchTerms(item.title, currentSearch);
+          highlightedShortDesc = highlightSearchTerms(shortDescription, currentSearch);
+          highlightedFullDesc = highlightSearchTerms(fullDescription, currentSearch);
+          
+          // Only highlight in specifics if already generated
+          if (specificsHtml && currentSearch.length > 0) {
+            const regex = new RegExp(`(${escapeHTML(currentSearch)})`, 'gi');
+            highlightedSpecifics = specificsHtml.replace(regex, '<span class="search-highlight">$1</span>');
+          }
+        }
+        
+        // Get category display name
+        const categoryDisplayName = getCategoryDisplayName(category);
+        
+        // Create HTML for item card with category badge and read more/less functionality
+        card.innerHTML = `
+          <div class="category-badge ${category}">${categoryDisplayName}</div>
+          <div class="listing-image">
+            <img src="${imageUrl}" alt="${escapeHTML(item.title)}">
           </div>
-          <a href="${item.itemWebUrl}" class="view-button" target="_blank">View on eBay</a>
-        </div>
-      `;
-      
-      listingsContainer.appendChild(card);
-      
-      // Add event listeners directly to the elements within this card
-      const readMoreLink = card.querySelector(`#${readMoreId}`);
-      const readLessLink = card.querySelector(`#${readLessId}`);
-      const descriptionElement = card.querySelector(`#${descriptionId}`);
-      
-      if (readMoreLink) {
-        readMoreLink.addEventListener('click', function(e) {
-          e.preventDefault();
-          descriptionElement.style.display = 'none';
-          descriptionElement.nextElementSibling.style.display = 'block';
-        });
-      }
-      
-      if (readLessLink) {
-        readLessLink.addEventListener('click', function(e) {
-          e.preventDefault();
-          descriptionElement.style.display = 'block';
-          descriptionElement.nextElementSibling.style.display = 'none';
-        });
+          <div class="listing-details">
+            <h2>${highlightedTitle}</h2>
+            <p class="price">${item.price ? item.price.value : '0.00'} ${item.price ? item.price.currency : 'USD'}</p>
+            <div class="item-specifics">
+              <div class="description-short" id="${descriptionId}">
+                <p>${highlightedShortDesc}</p>
+                <a href="#" class="read-more-link" id="${readMoreId}">Read more</a>
+              </div>
+              <div class="description-full" style="display: none;">
+                <p>${highlightedFullDesc}</p>
+                <a href="#" class="read-less-link" id="${readLessId}">Read less</a>
+              </div>
+              ${highlightedSpecifics}
+            </div>
+            <a href="${item.itemWebUrl}" class="view-button" target="_blank">View on eBay</a>
+          </div>
+        `;
+        
+        listingsContainer.appendChild(card);
+        
+        // Add event listeners directly to the elements within this card
+        const readMoreLink = document.getElementById(readMoreId);
+        const readLessLink = document.getElementById(readLessId);
+        const descriptionElement = document.getElementById(descriptionId);
+        
+        if (readMoreLink) {
+          readMoreLink.addEventListener('click', function(e) {
+            e.preventDefault();
+            descriptionElement.style.display = 'none';
+            descriptionElement.nextElementSibling.style.display = 'block';
+          });
+        }
+        
+        if (readLessLink) {
+          readLessLink.addEventListener('click', function(e) {
+            e.preventDefault();
+            descriptionElement.style.display = 'block';
+            descriptionElement.nextElementSibling.style.display = 'none';
+          });
+        }
+      } catch (itemError) {
+        console.error('Error rendering item:', itemError);
       }
     });
     
