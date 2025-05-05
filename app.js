@@ -182,7 +182,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
   
-  // Enhanced mock listings function with manual/digital/quartz watch data
+  // Enhanced mock listings function with manual/digital/quartz/automatic watch data
   async function fetchMockListings() {
     // Simulate network delay
     await new Promise(resolve => setTimeout(resolve, 1000));
@@ -194,7 +194,7 @@ document.addEventListener('DOMContentLoaded', () => {
           itemId: '123456789',
           title: 'Vintage Omega Seamaster Automatic Watch - 1940s',
           image: {
-            imageUrl: 'https://placehold.co/600x400/b29059/fff?text=Omega+Seamaster'
+            imageUrl: 'https://placehold.co/600x400/8a5928/fff?text=Omega+Seamaster'
           },
           price: {
             value: '3875.00',
@@ -208,7 +208,7 @@ document.addEventListener('DOMContentLoaded', () => {
             { name: 'Model', value: 'Seamaster' },
             { name: 'Year', value: '1940s' },
             { name: 'Movement', value: 'Automatic' },
-            { name: 'Type', value: 'Manual' },
+            { name: 'Type', value: 'Automatic' },
             { name: 'Listing Date', value: '2025-04-15' }
           ]
         },
@@ -327,20 +327,20 @@ document.addEventListener('DOMContentLoaded', () => {
           itemId: '889977665',
           title: 'Seiko SKX007 Automatic Dive Watch',
           image: {
-            imageUrl: 'https://placehold.co/600x400/4a90e2/fff?text=Seiko+SKX007'
+            imageUrl: 'https://placehold.co/600x400/8a5928/fff?text=Seiko+SKX007'
           },
           price: {
             value: '349.99',
             currency: 'USD'
           },
           itemWebUrl: 'https://www.ebay.com/itm/889977665',
-          shortDescription: 'Classic Seiko SKX007 dive watch. Excellent condition with original box and papers.',
-          fullDescription: 'Classic Seiko SKX007 dive watch in excellent condition with original box and papers. This iconic diver features the reliable 7S26 automatic movement, a unidirectional rotating bezel, and 200m of water resistance. The 42mm case sits perfectly on the wrist with the Jubilee bracelet. The black dial with luminous markers is in pristine condition with no scratches or blemishes. A perfect everyday watch with a rich heritage of quality and reliability.',
+          shortDescription: 'Classic Seiko SKX007 automatic dive watch. Excellent condition with original box and papers.',
+          fullDescription: 'Classic Seiko SKX007 automatic dive watch in excellent condition with original box and papers. This iconic diver features the reliable 7S26 automatic movement, a unidirectional rotating bezel, and 200m of water resistance. The 42mm case sits perfectly on the wrist with the Jubilee bracelet. The black dial with luminous markers is in pristine condition with no scratches or blemishes. A perfect everyday watch with a rich heritage of quality and reliability.',
           specifics: [
             { name: 'Brand', value: 'Seiko' },
             { name: 'Model', value: 'SKX007' },
             { name: 'Year', value: '2019' },
-            { name: 'Type', value: 'Quartz' },
+            { name: 'Type', value: 'Automatic' },
             { name: 'Water Resistance', value: '200m' },
             { name: 'Listing Date', value: '2025-04-05' }
           ]
@@ -402,6 +402,12 @@ document.addEventListener('DOMContentLoaded', () => {
           return true;
         }
         
+        // For automatic category
+        if (currentCategory.toLowerCase() === 'automatic' && 
+            item.title.toLowerCase().includes('automatic')) {
+          return true;
+        }
+        
         // For digital category
         if (currentCategory.toLowerCase() === 'digital' && 
            (item.title.toLowerCase().includes('digital') || 
@@ -425,10 +431,11 @@ document.addEventListener('DOMContentLoaded', () => {
           return true;
         }
         
-        // For quartz category - if not digital or manual and doesn't contain specific brands
+        // For quartz category - if not automatic, digital or manual and doesn't contain specific brands
         if (currentCategory.toLowerCase() === 'quartz') {
           const title = item.title.toLowerCase();
           // Check if it doesn't contain any of the excluded terms
+          const hasAutomaticTerms = title.includes('automatic');
           const hasDigitalTerms = title.includes('digital') || 
                                  title.includes('ana-digi') || 
                                  title.includes('casio') || 
@@ -444,7 +451,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                 title.includes('illinois');
           
           // If it doesn't have any of the excluded terms, it falls under quartz
-          return !hasDigitalTerms && !hasManualTerms;
+          return !hasAutomaticTerms && !hasDigitalTerms && !hasManualTerms;
         }
         
         return false;
@@ -560,7 +567,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // Function to render an array of listings
   function renderListingsArray(listings) {
     listings.forEach(item => {
-      // Determine the category of the watch (manual, digital, or quartz)
+      // Determine the category of the watch (manual, digital, automatic, or quartz)
       let category = determineWatchCategory(item);
       
       const card = document.createElement('div');
@@ -573,6 +580,8 @@ document.addEventListener('DOMContentLoaded', () => {
         imageUrl = item.image?.imageUrl || 'https://placehold.co/600x400/b29059/fff?text=Manual+Watch';
       } else if (category === 'digital') {
         imageUrl = item.image?.imageUrl || 'https://placehold.co/600x400/ff5987/fff?text=Digital+Watch';
+      } else if (category === 'automatic') {
+        imageUrl = item.image?.imageUrl || 'https://placehold.co/600x400/8a5928/fff?text=Automatic+Watch';
       } else { // quartz
         imageUrl = item.image?.imageUrl || 'https://placehold.co/600x400/4a90e2/fff?text=Quartz+Watch';
       }
@@ -640,12 +649,6 @@ document.addEventListener('DOMContentLoaded', () => {
       listingsContainer.appendChild(card);
       
       // Add event listeners for read more/less functionality
-      document.getElementById(readMoreId)?.addEventListener('click', function(e) {
-        e.preventDefault();
-        document.getElementById(descriptionId).style.display = 'none';
-        document.getElementById(descriptionId).nextElementSibling.style.display = 'block';
-      });
-      
       document.getElementById(readLessId)?.addEventListener('click', function(e) {
         e.preventDefault();
         document.getElementById(descriptionId).style.display = 'block';
@@ -662,11 +665,16 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
   
-  // Function to determine watch category (manual, digital, or quartz)
+  // Function to determine watch category (manual, digital, automatic, or quartz)
   function determineWatchCategory(item) {
     const title = item.title.toLowerCase();
     
-    // Check for digital first
+    // Check for automatic first
+    if (title.includes('automatic')) {
+      return 'automatic';
+    }
+    
+    // Then check for digital
     if (title.includes('digital') || 
         title.includes('ana-digi') || 
         title.includes('casio') || 
@@ -696,6 +704,8 @@ document.addEventListener('DOMContentLoaded', () => {
     switch(category) {
       case 'manual':
         return 'Manual';
+      case 'automatic':
+        return 'Automatic';
       case 'digital':
         return 'Digital';
       case 'quartz':
@@ -727,5 +737,5 @@ document.addEventListener('DOMContentLoaded', () => {
       top: 0,
       behavior: 'smooth'
     });
-  });
 });
+})
