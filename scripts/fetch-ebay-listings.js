@@ -32,6 +32,15 @@ const FINDING_API_URL = 'https://svcs.ebay.com/services/search/FindingService/v1
 // Helper function to delay execution (for rate limiting)
 const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
+// Helper to guess watch type from title
+function inferWatchType(title) {
+  const t = title.toLowerCase();
+  if (t.includes('automatic')) return 'Automatic';
+  if (t.includes('digital') || t.includes('lcd') || t.includes('casio') || t.includes('ana-digi') || t.includes('ana digi')) return 'Digital';
+  if (t.includes('manual') || t.includes('hand-wind') || t.includes('military') || t.includes('rolco') || t.includes('elgin') || t.includes('waltham')) return 'Manual';
+  return 'Quartz';
+}
+
 // Main function to fetch all listings with pagination support
 async function fetchAllSellerListings(maxRetries = 3, initialDelay = 5000) {
   let allListings = [];
@@ -312,7 +321,14 @@ async function processBrowseApiResponse(apiResponse) {
         
         // Create specifics array from item aspects
         const specifics = [];
-        
+
+        // Add inferred Type based on title
+        const inferredType = inferWatchType(item.title);
+        specifics.push({
+          name: 'Type',
+          value: inferredType
+        });
+
         // Add listing format (Auction vs Buy It Now)
         if (item.buyingOptions) {
           specifics.push({
