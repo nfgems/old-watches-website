@@ -394,7 +394,7 @@ document.addEventListener('DOMContentLoaded', () => {
   async function fetchListingsFromJson() {
     try {
       console.log('Attempting to fetch listings.json...');
-      const response = await fetch('https://nfgems.github.io/old-watches-wesbite/listings.json');
+      const response = await fetch('listings.json');
       if (!response.ok) {
         console.error('Response not OK:', response.status, response.statusText);
         throw new Error('Failed to fetch listings data');
