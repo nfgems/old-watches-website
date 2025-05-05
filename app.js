@@ -85,6 +85,14 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
   
+  // Helper function to decode HTML entities
+  function decodeHTML(html) {
+    if (!html) return '';
+    const txt = document.createElement('textarea');
+    txt.innerHTML = html;
+    return txt.value;
+  }
+  
   // Helper function to create safe ID for DOM elements
   function createSafeId(str) {
     if (!str) return '';
@@ -162,7 +170,6 @@ function getWatchCategory(item) {
   // Fallback
   return 'quartz';
 }
-
   
   // Function to setup search functionality
   function setupSearch() {
@@ -717,16 +724,20 @@ function getWatchCategory(item) {
         const shortDescription = item.shortDescription || '';
         const fullDescription = item.fullDescription || item.shortDescription || '';
         
+        // Decode HTML entities first, then apply escaping and highlighting
+        const decodedShortDesc = decodeHTML(shortDescription);
+        const decodedFullDesc = decodeHTML(fullDescription);
+        
         // Apply highlighting safely if there is a search term
         let highlightedTitle = escapeHTML(item.title);
-        let highlightedShortDesc = escapeHTML(shortDescription);
-        let highlightedFullDesc = escapeHTML(fullDescription);
+        let highlightedShortDesc = escapeHTML(decodedShortDesc);
+        let highlightedFullDesc = escapeHTML(decodedFullDesc);
         let highlightedSpecifics = specificsHtml;
         
         if (currentSearch.length > 0) {
           highlightedTitle = highlightSearchTerms(item.title, currentSearch);
-          highlightedShortDesc = highlightSearchTerms(shortDescription, currentSearch);
-          highlightedFullDesc = highlightSearchTerms(fullDescription, currentSearch);
+          highlightedShortDesc = highlightSearchTerms(decodedShortDesc, currentSearch);
+          highlightedFullDesc = highlightSearchTerms(decodedFullDesc, currentSearch);
           
           // Only highlight in specifics if already generated
           if (specificsHtml && currentSearch.length > 0) {
@@ -765,7 +776,7 @@ function getWatchCategory(item) {
         listingsContainer.appendChild(card);
         
         // Add event listeners directly to the elements within this card
-        const readMoreLink = document.getElementById(readMoreId);
+           const readMoreLink = document.getElementById(readMoreId);
         const readLessLink = document.getElementById(readLessId);
         const descriptionElement = document.getElementById(descriptionId);
         
