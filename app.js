@@ -406,6 +406,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (currentCategory.toLowerCase() === 'digital' && 
            (item.title.toLowerCase().includes('digital') || 
             item.title.toLowerCase().includes('ana-digi') ||
+            item.title.toLowerCase().includes('casio') ||
             item.title.toLowerCase().includes('ana digi'))) {
           return true;
         }
@@ -436,6 +437,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                 title.includes('cartier') ||
                                 title.includes('military') ||
                                 title.includes('elgin') || 
+                                title.includes('bulova') || 
                                 title.includes('waltham') || 
                                 title.includes('illinois');
           
