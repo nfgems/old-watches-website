@@ -108,51 +108,61 @@ document.addEventListener('DOMContentLoaded', () => {
     }).join('');
   }
   
-  // Helper function to determine watch category - used by multiple functions
-  function getWatchCategory(item) {
-    // First check for type in the specifics (more reliable)
-    if (item.specifics) {
-      const typeSpecific = item.specifics.find(spec => spec.name === 'Type');
-      if (typeSpecific) {
-        const type = typeSpecific.value.toLowerCase();
-        if (['manual', 'automatic', 'digital', 'quartz'].includes(type)) {
-          return type;
-        }
+// Function to determine watch category - used by multiple functions
+function getWatchCategory(item) {
+  // First check for type in the specifics (more reliable)
+  if (item.specifics) {
+    const typeSpecific = item.specifics.find(spec => spec.name === 'Type');
+    if (typeSpecific) {
+      const type = typeSpecific.value.toLowerCase();
+      if (['manual', 'automatic', 'digital', 'quartz'].includes(type)) {
+        return type;
       }
     }
-    
-    // Fall back to title-based detection
-    const title = item.title.toLowerCase();
-    
-    // Check for automatic first
-    if (title.includes('automatic')) {
-      return 'automatic';
-    }
-    
-    // Then check for digital
-    if (title.includes('digital') || 
-        title.includes('ana-digi') || 
-        title.includes('casio') || 
-        title.includes('ana digi')) {
-      return 'digital';
-    }
-    
-    // Then check for manual watches
-    if (title.includes('manual') || 
-        title.includes('rolex') ||
-        title.includes('rolco') ||
-        title.includes('cartier') ||
-        title.includes('military') ||
-        title.includes('elgin') || 
-        title.includes('bulova') || 
-        title.includes('waltham') || 
-        title.includes('illinois')) {
-      return 'manual';
-    }
-    
-    // Otherwise, categorize as quartz
-    return 'quartz';
   }
+  
+  // Fall back to title-based detection
+  const title = item.title.toLowerCase();
+  
+  // Check for manual watches FIRST since Rolex, Bulova, etc. should be manual
+  if (title.includes('manual') || 
+      title.includes('hand-wind') || 
+      title.includes('hand wind') || 
+      title.includes('mechanical') ||
+      title.includes('rolex') ||
+      title.includes('rolco') ||
+      title.includes('cartier') ||
+      title.includes('military') ||
+      title.includes('elgin') || 
+      title.includes('bulova') || 
+      title.includes('waltham') || 
+      title.includes('illinois') ||
+      title.includes('omega') && !title.includes('automatic') ||
+      title.includes('vintage') && !title.includes('automatic') && !title.includes('quartz') && !title.includes('digital')) {
+    return 'manual';
+  }
+  
+  // Then check for automatic
+  if (title.includes('automatic') || 
+      title.includes('self-winding') || 
+      title.includes('self winding')) {
+    return 'automatic';
+  }
+  
+  // Then check for digital
+  if (title.includes('digital') || 
+      title.includes('lcd') || 
+      title.includes('led') || 
+      title.includes('calculator') ||
+      title.includes('ana-digi') || 
+      title.includes('ana digi') ||
+      title.includes('casio') && !title.includes('quartz')) {
+    return 'digital';
+  }
+  
+  // Otherwise, categorize as quartz
+  return 'quartz';
+}
   
   // Function to setup search functionality
   function setupSearch() {
