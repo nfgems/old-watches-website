@@ -419,6 +419,7 @@ document.addEventListener('DOMContentLoaded', () => {
              item.title.toLowerCase().includes('cartier') ||
              item.title.toLowerCase().includes('military') ||
              item.title.toLowerCase().includes('elgin') || 
+             item.title.toLowerCase().includes('bulova') || 
              item.title.toLowerCase().includes('waltham') || 
              item.title.toLowerCase().includes('illinois'))) {
           return true;
@@ -430,6 +431,7 @@ document.addEventListener('DOMContentLoaded', () => {
           // Check if it doesn't contain any of the excluded terms
           const hasDigitalTerms = title.includes('digital') || 
                                  title.includes('ana-digi') || 
+                                 title.includes('casio') || 
                                  title.includes('ana digi');
           const hasManualTerms = title.includes('manual') ||
                                 title.includes('rolex') ||
@@ -667,6 +669,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Check for digital first
     if (title.includes('digital') || 
         title.includes('ana-digi') || 
+        title.includes('casio') || 
         title.includes('ana digi')) {
       return 'digital';
     }
@@ -678,6 +681,7 @@ document.addEventListener('DOMContentLoaded', () => {
         title.includes('cartier') ||
         title.includes('military') ||
         title.includes('elgin') || 
+        title.includes('bulova') || 
         title.includes('waltham') || 
         title.includes('illinois')) {
       return 'manual';
