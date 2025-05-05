@@ -386,81 +386,12 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
     
-    // First, filter by category
     let filteredListings = [];
     
-    if (currentCategory === 'all') {
-      filteredListings = [...allListings.itemSummaries];
-    } else {
-      filteredListings = allListings.itemSummaries.filter(item => {
-        // Check if the item has specifics and at least one specific contains the category
-        if (!item.specifics) return false;
-        
-        // First check for Type specific
-        const typeSpecific = item.specifics.find(spec => spec.name === 'Type');
-        if (typeSpecific && typeSpecific.value.toLowerCase() === currentCategory.toLowerCase()) {
-          return true;
-        }
-        
-        // For automatic category
-        if (currentCategory.toLowerCase() === 'automatic' && 
-            item.title.toLowerCase().includes('automatic')) {
-          return true;
-        }
-        
-        // For digital category
-        if (currentCategory.toLowerCase() === 'digital' && 
-           (item.title.toLowerCase().includes('digital') || 
-            item.title.toLowerCase().includes('ana-digi') ||
-            item.title.toLowerCase().includes('casio') ||
-            item.title.toLowerCase().includes('ana digi'))) {
-          return true;
-        }
-        
-        // For manual category
-        if (currentCategory.toLowerCase() === 'manual' && 
-            (item.title.toLowerCase().includes('manual') ||
-             item.title.toLowerCase().includes('rolex') ||
-             item.title.toLowerCase().includes('rolco') ||
-             item.title.toLowerCase().includes('cartier') ||
-             item.title.toLowerCase().includes('military') ||
-             item.title.toLowerCase().includes('elgin') || 
-             item.title.toLowerCase().includes('bulova') || 
-             item.title.toLowerCase().includes('waltham') || 
-             item.title.toLowerCase().includes('illinois'))) {
-          return true;
-        }
-        
-        // For quartz category - if not automatic, digital or manual and doesn't contain specific brands
-        if (currentCategory.toLowerCase() === 'quartz') {
-          const title = item.title.toLowerCase();
-          // Check if it doesn't contain any of the excluded terms
-          const hasAutomaticTerms = title.includes('automatic');
-          const hasDigitalTerms = title.includes('digital') || 
-                                 title.includes('ana-digi') || 
-                                 title.includes('casio') || 
-                                 title.includes('ana digi');
-          const hasManualTerms = title.includes('manual') ||
-                                title.includes('rolex') ||
-                                title.includes('rolco') ||
-                                title.includes('cartier') ||
-                                title.includes('military') ||
-                                title.includes('elgin') || 
-                                title.includes('bulova') || 
-                                title.includes('waltham') || 
-                                title.includes('illinois');
-          
-          // If it doesn't have any of the excluded terms, it falls under quartz
-          return !hasAutomaticTerms && !hasDigitalTerms && !hasManualTerms;
-        }
-        
-        return false;
-      });
-    }
-    
-    // Then, apply search filter if there is a search term
+    // Modified logic: If there's a search term, search across ALL listings first
     if (currentSearch.length > 0) {
-      filteredListings = filteredListings.filter(item => {
+      // Start with all listings
+      filteredListings = allListings.itemSummaries.filter(item => {
         // Search in title
         if (item.title.toLowerCase().includes(currentSearch)) {
           return true;
@@ -496,11 +427,150 @@ document.addEventListener('DOMContentLoaded', () => {
       }
       
       searchResultsInfo.style.display = 'flex';
+      
+      // Then, optionally apply category filter if not "all"
+      // This is optional and can be removed if you want search to completely ignore category
+      if (currentCategory !== 'all') {
+        filteredListings = filteredListings.filter(item => {
+          // Check if the item has specifics and at least one specific contains the category
+          if (!item.specifics) return false;
+          
+          // First check for Type specific
+          const typeSpecific = item.specifics.find(spec => spec.name === 'Type');
+          if (typeSpecific && typeSpecific.value.toLowerCase() === currentCategory.toLowerCase()) {
+            return true;
+          }
+          
+          // For automatic category
+          if (currentCategory.toLowerCase() === 'automatic' && 
+              item.title.toLowerCase().includes('automatic')) {
+            return true;
+          }
+          
+          // For digital category
+          if (currentCategory.toLowerCase() === 'digital' && 
+             (item.title.toLowerCase().includes('digital') || 
+              item.title.toLowerCase().includes('ana-digi') ||
+              item.title.toLowerCase().includes('casio') ||
+              item.title.toLowerCase().includes('ana digi'))) {
+            return true;
+          }
+          
+          // For manual category
+          if (currentCategory.toLowerCase() === 'manual' && 
+              (item.title.toLowerCase().includes('manual') ||
+               item.title.toLowerCase().includes('rolex') ||
+               item.title.toLowerCase().includes('rolco') ||
+               item.title.toLowerCase().includes('cartier') ||
+               item.title.toLowerCase().includes('military') ||
+               item.title.toLowerCase().includes('elgin') || 
+               item.title.toLowerCase().includes('bulova') || 
+               item.title.toLowerCase().includes('waltham') || 
+               item.title.toLowerCase().includes('illinois'))) {
+            return true;
+          }
+          
+          // For quartz category - if not automatic, digital or manual and doesn't contain specific brands
+          if (currentCategory.toLowerCase() === 'quartz') {
+            const title = item.title.toLowerCase();
+            // Check if it doesn't contain any of the excluded terms
+            const hasAutomaticTerms = title.includes('automatic');
+            const hasDigitalTerms = title.includes('digital') || 
+                                   title.includes('ana-digi') || 
+                                   title.includes('casio') || 
+                                   title.includes('ana digi');
+            const hasManualTerms = title.includes('manual') ||
+                                  title.includes('rolex') ||
+                                  title.includes('rolco') ||
+                                  title.includes('cartier') ||
+                                  title.includes('military') ||
+                                  title.includes('elgin') || 
+                                  title.includes('bulova') || 
+                                  title.includes('waltham') || 
+                                  title.includes('illinois');
+            
+            // If it doesn't have any of the excluded terms, it falls under quartz
+            return !hasAutomaticTerms && !hasDigitalTerms && !hasManualTerms;
+          }
+          
+          return false;
+        });
+      }
     } else {
+      // If no search term, just filter by category as before
+      if (currentCategory === 'all') {
+        filteredListings = [...allListings.itemSummaries];
+      } else {
+        filteredListings = allListings.itemSummaries.filter(item => {
+          // Check if the item has specifics and at least one specific contains the category
+          if (!item.specifics) return false;
+          
+          // First check for Type specific
+          const typeSpecific = item.specifics.find(spec => spec.name === 'Type');
+          if (typeSpecific && typeSpecific.value.toLowerCase() === currentCategory.toLowerCase()) {
+            return true;
+          }
+          
+          // For automatic category
+          if (currentCategory.toLowerCase() === 'automatic' && 
+              item.title.toLowerCase().includes('automatic')) {
+            return true;
+          }
+          
+          // For digital category
+          if (currentCategory.toLowerCase() === 'digital' && 
+             (item.title.toLowerCase().includes('digital') || 
+              item.title.toLowerCase().includes('ana-digi') ||
+              item.title.toLowerCase().includes('casio') ||
+              item.title.toLowerCase().includes('ana digi'))) {
+            return true;
+          }
+          
+          // For manual category
+          if (currentCategory.toLowerCase() === 'manual' && 
+              (item.title.toLowerCase().includes('manual') ||
+               item.title.toLowerCase().includes('rolex') ||
+               item.title.toLowerCase().includes('rolco') ||
+               item.title.toLowerCase().includes('cartier') ||
+               item.title.toLowerCase().includes('military') ||
+               item.title.toLowerCase().includes('elgin') || 
+               item.title.toLowerCase().includes('bulova') || 
+               item.title.toLowerCase().includes('waltham') || 
+               item.title.toLowerCase().includes('illinois'))) {
+            return true;
+          }
+          
+          // For quartz category - if not automatic, digital or manual and doesn't contain specific brands
+          if (currentCategory.toLowerCase() === 'quartz') {
+            const title = item.title.toLowerCase();
+            // Check if it doesn't contain any of the excluded terms
+            const hasAutomaticTerms = title.includes('automatic');
+            const hasDigitalTerms = title.includes('digital') || 
+                                   title.includes('ana-digi') || 
+                                   title.includes('casio') || 
+                                   title.includes('ana digi');
+            const hasManualTerms = title.includes('manual') ||
+                                  title.includes('rolex') ||
+                                  title.includes('rolco') ||
+                                  title.includes('cartier') ||
+                                  title.includes('military') ||
+                                  title.includes('elgin') || 
+                                  title.includes('bulova') || 
+                                  title.includes('waltham') || 
+                                  title.includes('illinois');
+            
+            // If it doesn't have any of the excluded terms, it falls under quartz
+            return !hasAutomaticTerms && !hasDigitalTerms && !hasManualTerms;
+          }
+          
+          return false;
+        });
+      }
+      
       searchResultsInfo.style.display = 'none';
     }
     
-    // Then, apply sorting
+    // Apply sorting
     const sortedListings = sortListings(filteredListings, currentSort);
     
     // Clear listings container
@@ -590,8 +660,8 @@ document.addEventListener('DOMContentLoaded', () => {
       let specificsHtml = '';
       if (item.specifics && item.specifics.length > 0) {
         specificsHtml = item.specifics
-          .filter(spec => spec.name !== 'Type' && spec.name !== 'Listing Date') // Don't show Type or Listing Date
-          .map(spec => 
+          .filter(spec => spec.name !== 'Type' && spec.name !== 'Listing Date')
+.map(spec => 
             `<p><strong>${spec.name}:</strong> ${spec.value}</p>`
           ).join('');
       }
@@ -649,6 +719,12 @@ document.addEventListener('DOMContentLoaded', () => {
       listingsContainer.appendChild(card);
       
       // Add event listeners for read more/less functionality
+      document.getElementById(readMoreId)?.addEventListener('click', function(e) {
+        e.preventDefault();
+        document.getElementById(descriptionId).style.display = 'none';
+        document.getElementById(descriptionId).nextElementSibling.style.display = 'block';
+      });
+      
       document.getElementById(readLessId)?.addEventListener('click', function(e) {
         e.preventDefault();
         document.getElementById(descriptionId).style.display = 'block';
@@ -737,5 +813,5 @@ document.addEventListener('DOMContentLoaded', () => {
       top: 0,
       behavior: 'smooth'
     });
+  });
 });
-})
