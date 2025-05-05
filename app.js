@@ -18,12 +18,16 @@ document.addEventListener('DOMContentLoaded', () => {
   const searchResultsInfo = document.getElementById('search-results-info');
   const searchCount = document.getElementById('search-count');
   const resetSearchButton = document.getElementById('reset-search');
+  const searchSuggestionsEl = document.getElementById('search-suggestions');
   
   let allListings = []; // Store all listings for filtering
   let currentCategory = 'all'; // Track current category filter
   let currentSort = 'default'; // Track current sort option
   let currentView = 'horizontal'; // Track current view mode (horizontal or grid)
   let currentSearch = ''; // Track current search text
+  let searchTimeout = null; // For debouncing search input
+  let searchSuggestions = []; // Store the current search suggestions
+  let selectedSuggestionIndex = -1; // Track selected suggestion
   
   // Initialize view from localStorage or default to horizontal
   initializeView();
@@ -65,6 +69,82 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
   
+  // Helper function to escape HTML
+  function escapeHTML(str) {
+    if (!str) return '';
+    return str.replace(/[&<>"']/g, (match) => {
+      return {
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#39;'
+      }[match];
+    });
+  }
+  
+  // Helper function for highlighting search terms safely
+  function highlightSearchTerms(text, searchTerm) {
+    if (!text) return '';
+    if (!searchTerm || searchTerm.length === 0) return escapeHTML(text);
+    
+    const regex = new RegExp(`(${searchTerm})`, 'gi');
+    const segments = text.split(regex);
+    
+    return segments.map(segment => {
+      if (segment.toLowerCase() === searchTerm.toLowerCase()) {
+        return `<span class="search-highlight">${escapeHTML(segment)}</span>`;
+      }
+      return escapeHTML(segment);
+    }).join('');
+  }
+  
+  // Helper function to determine watch category - used by multiple functions
+  function getWatchCategory(item) {
+    // First check for type in the specifics (more reliable)
+    if (item.specifics) {
+      const typeSpecific = item.specifics.find(spec => spec.name === 'Type');
+      if (typeSpecific) {
+        const type = typeSpecific.value.toLowerCase();
+        if (['manual', 'automatic', 'digital', 'quartz'].includes(type)) {
+          return type;
+        }
+      }
+    }
+    
+    // Fall back to title-based detection
+    const title = item.title.toLowerCase();
+    
+    // Check for automatic first
+    if (title.includes('automatic')) {
+      return 'automatic';
+    }
+    
+    // Then check for digital
+    if (title.includes('digital') || 
+        title.includes('ana-digi') || 
+        title.includes('casio') || 
+        title.includes('ana digi')) {
+      return 'digital';
+    }
+    
+    // Then check for manual watches
+    if (title.includes('manual') || 
+        title.includes('rolex') ||
+        title.includes('rolco') ||
+        title.includes('cartier') ||
+        title.includes('military') ||
+        title.includes('elgin') || 
+        title.includes('bulova') || 
+        title.includes('waltham') || 
+        title.includes('illinois')) {
+      return 'manual';
+    }
+    
+    // Otherwise, categorize as quartz
+    return 'quartz';
+  }
+  
   // Function to setup search functionality
   function setupSearch() {
     // Search button click handler
@@ -75,32 +155,78 @@ document.addEventListener('DOMContentLoaded', () => {
     // Enter key press in search input
     searchInput.addEventListener('keydown', (e) => {
       if (e.key === 'Enter') {
+        if (selectedSuggestionIndex >= 0 && selectedSuggestionIndex < searchSuggestions.length) {
+          // If a suggestion is selected, use that suggestion
+          searchInput.value = searchSuggestions[selectedSuggestionIndex].text;
+        }
         performSearch();
+        hideSearchSuggestions();
+      } else if (e.key === 'ArrowDown') {
+        // Navigate down through suggestions
+        e.preventDefault();
+        selectedSuggestionIndex = Math.min(selectedSuggestionIndex + 1, searchSuggestions.length - 1);
+        highlightSelectedSuggestion();
+      } else if (e.key === 'ArrowUp') {
+        // Navigate up through suggestions
+        e.preventDefault();
+        selectedSuggestionIndex = Math.max(selectedSuggestionIndex - 1, -1);
+        highlightSelectedSuggestion();
+      } else if (e.key === 'Escape') {
+        hideSearchSuggestions();
+      }
+    });
+    
+    // Hide suggestions when clicking outside
+    document.addEventListener('click', (e) => {
+      if (!searchInput.contains(e.target) && !searchSuggestionsEl.contains(e.target)) {
+        hideSearchSuggestions();
       }
     });
     
     // Clear search button
     clearSearchButton.addEventListener('click', () => {
-      searchInput.value = '';
-      currentSearch = '';
-      clearSearchButton.style.display = 'none';
-      searchResultsInfo.style.display = 'none';
-      applyFiltersAndSort();
+      resetSearch();
+      hideSearchSuggestions();
     });
     
     // Reset search button
     resetSearchButton.addEventListener('click', () => {
-      searchInput.value = '';
-      currentSearch = '';
-      clearSearchButton.style.display = 'none';
-      searchResultsInfo.style.display = 'none';
-      applyFiltersAndSort();
+      resetSearch();
+      hideSearchSuggestions();
     });
     
-    // Show/hide clear button based on search input content
+    // Debounced search on input
     searchInput.addEventListener('input', () => {
       clearSearchButton.style.display = searchInput.value.length > 0 ? 'block' : 'none';
+      
+      // Clear previous timeout
+      if (searchTimeout) {
+        clearTimeout(searchTimeout);
+      }
+      
+      // Set a new timeout for 300ms delay
+      searchTimeout = setTimeout(() => {
+        const input = searchInput.value.trim().toLowerCase();
+        if (input.length > 1) { // Only suggest if > 1 character
+          showSearchSuggestions(input);
+        } else {
+          hideSearchSuggestions();
+          if (input.length === 0 && currentSearch.length > 0) {
+            // Reset if field is cleared
+            resetSearch();
+          }
+        }
+      }, 300);
     });
+  }
+  
+  // Function to reset search
+  function resetSearch() {
+    searchInput.value = '';
+    currentSearch = '';
+    clearSearchButton.style.display = 'none';
+    searchResultsInfo.style.display = 'none';
+    applyFiltersAndSort();
   }
   
   // Function to perform search
@@ -115,6 +241,105 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     applyFiltersAndSort();
+  }
+  
+  // Function to generate and show search suggestions
+  function showSearchSuggestions(input) {
+    if (!allListings || !allListings.itemSummaries) return;
+    
+    searchSuggestions = [];
+    selectedSuggestionIndex = -1;
+    
+    // Generate suggestions based on titles, brands, and other specifics
+    allListings.itemSummaries.forEach(item => {
+      // Check title
+      if (item.title.toLowerCase().includes(input)) {
+        searchSuggestions.push({
+          text: item.title,
+          category: getWatchCategory(item)
+        });
+      }
+      
+      // Check brand, model, year in specifics
+      if (item.specifics) {
+        const brandSpec = item.specifics.find(spec => spec.name === 'Brand');
+        const modelSpec = item.specifics.find(spec => spec.name === 'Model');
+        const yearSpec = item.specifics.find(spec => spec.name === 'Year');
+        
+        if (brandSpec && brandSpec.value.toLowerCase().includes(input)) {
+          searchSuggestions.push({
+            text: brandSpec.value,
+            category: getWatchCategory(item)
+          });
+        }
+        
+        if (modelSpec && modelSpec.value.toLowerCase().includes(input)) {
+          searchSuggestions.push({
+            text: modelSpec.value,
+            category: getWatchCategory(item)
+          });
+        }
+        
+        if (yearSpec && yearSpec.value.toLowerCase().includes(input)) {
+          searchSuggestions.push({
+            text: yearSpec.value,
+            category: getWatchCategory(item)
+          });
+        }
+      }
+    });
+    
+    // Remove duplicates and limit to 5 suggestions
+    searchSuggestions = [...new Map(searchSuggestions.map(item => 
+      [item.text, item])).values()].slice(0, 5);
+    
+    // If we have suggestions, show them
+    if (searchSuggestions.length > 0) {
+      // Build the suggestions HTML
+      searchSuggestionsEl.innerHTML = '';
+      searchSuggestions.forEach((suggestion, index) => {
+        const div = document.createElement('div');
+        div.className = 'search-suggestion';
+        div.innerHTML = `
+          ${escapeHTML(suggestion.text)}
+          <span class="suggestion-category ${suggestion.category}">${getCategoryDisplayName(suggestion.category)}</span>
+        `;
+        div.addEventListener('click', () => {
+          searchInput.value = suggestion.text;
+          performSearch();
+          hideSearchSuggestions();
+        });
+        searchSuggestionsEl.appendChild(div);
+      });
+      
+      // Show the suggestions
+      searchSuggestionsEl.style.display = 'block';
+    } else {
+      hideSearchSuggestions();
+    }
+  }
+  
+  // Function to hide search suggestions
+  function hideSearchSuggestions() {
+    searchSuggestionsEl.style.display = 'none';
+    selectedSuggestionIndex = -1;
+  }
+  
+  // Function to highlight the selected suggestion
+  function highlightSelectedSuggestion() {
+    const suggestionItems = document.querySelectorAll('.search-suggestion');
+    
+    // Remove highlighting from all suggestions
+    suggestionItems.forEach(item => {
+      item.classList.remove('selected');
+    });
+    
+    // If a suggestion is selected, highlight it
+    if (selectedSuggestionIndex >= 0 && selectedSuggestionIndex < suggestionItems.length) {
+      suggestionItems[selectedSuggestionIndex].classList.add('selected');
+      // Update input field with the selected suggestion text
+      searchInput.value = searchSuggestions[selectedSuggestionIndex].text;
+    }
   }
   
   // Function to setup view toggle
@@ -181,8 +406,7 @@ document.addEventListener('DOMContentLoaded', () => {
       return fetchMockListings();
     }
   }
-  
-  // Enhanced mock listings function with manual/digital/quartz/automatic watch data
+// Enhanced mock listings function with manual/digital/quartz/automatic watch data
   async function fetchMockListings() {
     // Simulate network delay
     await new Promise(resolve => setTimeout(resolve, 1000));
@@ -212,139 +436,8 @@ document.addEventListener('DOMContentLoaded', () => {
             { name: 'Listing Date', value: '2025-04-15' }
           ]
         },
-        {
-          itemId: '223344556',
-          title: 'Vintage Heuer Chronograph Ref. 7143 - Pre-War Manual Wind',
-          image: {
-            imageUrl: 'https://placehold.co/600x400/b29059/fff?text=Heuer+Chronograph'
-          },
-          price: {
-            value: '9850.00',
-            currency: 'USD'
-          },
-          itemWebUrl: 'https://www.ebay.com/itm/223344556',
-          shortDescription: 'Beautiful Pre-War Heuer Chronograph in original unpolished condition. Features the early manual wind movement.',
-          fullDescription: 'Beautiful Pre-War Heuer Chronograph in original unpolished condition. Features the early manual wind movement from 1939. This is a rare opportunity to acquire one of Heuer\'s most significant historical models in remarkably preserved condition. This example features its original black dial with applied gold numerals, showing a beautiful gentle patina. The case remains unpolished, retaining its original proportions and factory finishing. The movement has been recently serviced and is keeping excellent time.',
-          specifics: [
-            { name: 'Brand', value: 'Heuer' },
-            { name: 'Model', value: 'Chronograph' },
-            { name: 'Reference', value: '7143' },
-            { name: 'Year', value: '1939' },
-            { name: 'Type', value: 'Manual' },
-            { name: 'Movement', value: 'Manual Wind' },
-            { name: 'Listing Date', value: '2025-04-20' }
-          ]
-        },
-        {
-          itemId: '987654321',
-          title: 'Casio G-Shock DW-5600C-1V - Original 90s Digital Model',
-          image: {
-            imageUrl: 'https://placehold.co/600x400/ff5987/fff?text=G-Shock+Digital'
-          },
-          price: {
-            value: '699.99',
-            currency: 'USD'
-          },
-          itemWebUrl: 'https://www.ebay.com/itm/987654321',
-          shortDescription: 'The original DW-5600C from the early 90s as featured in action movies. Excellent condition with all original parts.',
-          fullDescription: 'The original DW-5600C from the early 90s as featured in action movies. Excellent condition with all original parts. This is the highly sought-after model, named for its appearance in the iconic 1994 action film. The DW-5600C is considered by collectors to be the holy grail of G-Shocks, representing the purest expression of the original 1983 design ethos, updated for the 90s with the addition of the iconic Protection bezel. This example is in exceptional condition with a clean, scratch-free crystal and crisp LCD display. All functions work perfectly, including the backlight, alarm, and stopwatch. The original rubber strap shows minimal wear and remains flexible. Comes complete with original box, manual, and warranty card.',
-          specifics: [
-            { name: 'Brand', value: 'Casio' },
-            { name: 'Model', value: 'G-Shock DW-5600C' },
-            { name: 'Year', value: '1992' },
-            { name: 'Type', value: 'Digital' },
-            { name: 'Movement', value: 'Quartz Digital' },
-            { name: 'Listing Date', value: '2025-04-01' }
-          ]
-        },
-        {
-          itemId: '564738291',
-          title: 'Seiko Ana-Digi H357 "James Bond" - New Old Stock 80s',
-          image: {
-            imageUrl: 'https://placehold.co/600x400/ff5987/fff?text=Seiko+Ana-Digi'
-          },
-          price: {
-            value: '1249.99',
-            currency: 'USD'
-          },
-          itemWebUrl: 'https://www.ebay.com/itm/564738291',
-          shortDescription: 'New Old Stock Seiko Ana-Digi H357 from 1982. Still sealed in original packaging. The iconic James Bond watch!',
-          fullDescription: 'New Old Stock Seiko Ana-Digi H357 from 1982. Still sealed in original packaging. This is the iconic James Bond watch worn in several films of the early 80s. This is a true time capsule example, never worn and still sealed in its original Seiko packaging with price tag. The watch features both analog hands and a digital display, world time, daily alarm, and chronograph functions. Made famous by numerous appearances in 80s pop culture, this particular variant is the most desirable gold model with rectangular case, exactly as appeared in popular media. A perfect addition to any vintage technology collection or for the nostalgic enthusiast looking to wear a pristine example of this iconic timepiece.',
-          specifics: [
-            { name: 'Brand', value: 'Seiko' },
-            { name: 'Model', value: 'H357 Ana-Digi' },
-            { name: 'Year', value: '1982' },
-            { name: 'Type', value: 'Digital' },
-            { name: 'Condition', value: 'New Old Stock' },
-            { name: 'Listing Date', value: '2025-03-15' }
-          ]
-        },
-        {
-          itemId: '112233445',
-          title: 'LeCoultre Military Issue - British Army WWII',
-          image: {
-            imageUrl: 'https://placehold.co/600x400/b29059/fff?text=LeCoultre+Military'
-          },
-          price: {
-            value: '4250.00',
-            currency: 'USD'
-          },
-          itemWebUrl: 'https://www.ebay.com/itm/112233445',
-          shortDescription: 'Rare British Army issued LeCoultre from World War II. Features special military markings on the caseback.',
-          fullDescription: 'Rare British Army issued LeCoultre from World War II. Features special military markings on the caseback. This extremely rare military-issued LeCoultre from 1943 was specifically produced for the British Army during WWII. The caseback bears the distinct broad arrow marking used to denote British military property, along with military issue numbers and year of issue. The dial features luminous radium numerals and hands that have aged to a beautiful patina. The 35mm stainless steel case shows the honest wear expected of a watch that served in wartime conditions, with each mark telling part of its unique history. Accompanied by extensive military service documentation tracing its history from issuance to a British Army officer in 1943.',
-          specifics: [
-            { name: 'Brand', value: 'LeCoultre' },
-            { name: 'Model', value: 'Military Issue' },
-            { name: 'Year', value: '1943' },
-            { name: 'Type', value: 'Manual' },
-            { name: 'Provenance', value: 'British Army' },
-            { name: 'Listing Date', value: '2025-05-01' }
-          ]
-        },
-        {
-          itemId: '667788991',
-          title: 'Pulsar P2 Digital LED - Original 1970s Space Age',
-          image: {
-            imageUrl: 'https://placehold.co/600x400/ff5987/fff?text=Pulsar+LED'
-          },
-          price: {
-            value: '6349.99',
-            currency: 'USD'
-          },
-          itemWebUrl: 'https://www.ebay.com/itm/667788991',
-          shortDescription: 'Iconic Pulsar P2 LED digital watch from the 1970s. The first digital electronic watch ever made.',
-          fullDescription: 'Iconic Pulsar P2 LED digital watch from the 1970s. The first digital electronic watch ever made. This is the groundbreaking model that changed watchmaking forever, introduced in 1972 as the world\'s first all-electronic digital watch. With its futuristic red LED display that only shows the time when the button is pressed (to save battery life), the Pulsar was considered the ultimate luxury tech item of its era, worn by celebrities and even U.S. Presidents. This example is in excellent condition with its original 18k gold-filled case and bracelet. All electronics work perfectly, with the signature bright red display illuminating crisply when activated. Complete with original box and papers, this is a rare opportunity to own a pivotal piece of horological history.',
-          specifics: [
-            { name: 'Brand', value: 'Pulsar' },
-            { name: 'Model', value: 'P2 LED' },
-            { name: 'Year', value: '1972' },
-            { name: 'Type', value: 'Digital' },
-            { name: 'Style', value: 'LED Display' },
-            { name: 'Listing Date', value: '2025-04-10' }
-          ]
-        },
-        {
-          itemId: '889977665',
-          title: 'Seiko SKX007 Automatic Dive Watch',
-          image: {
-            imageUrl: 'https://placehold.co/600x400/8a5928/fff?text=Seiko+SKX007'
-          },
-          price: {
-            value: '349.99',
-            currency: 'USD'
-          },
-          itemWebUrl: 'https://www.ebay.com/itm/889977665',
-          shortDescription: 'Classic Seiko SKX007 automatic dive watch. Excellent condition with original box and papers.',
-          fullDescription: 'Classic Seiko SKX007 automatic dive watch in excellent condition with original box and papers. This iconic diver features the reliable 7S26 automatic movement, a unidirectional rotating bezel, and 200m of water resistance. The 42mm case sits perfectly on the wrist with the Jubilee bracelet. The black dial with luminous markers is in pristine condition with no scratches or blemishes. A perfect everyday watch with a rich heritage of quality and reliability.',
-          specifics: [
-            { name: 'Brand', value: 'Seiko' },
-            { name: 'Model', value: 'SKX007' },
-            { name: 'Year', value: '2019' },
-            { name: 'Type', value: 'Automatic' },
-            { name: 'Water Resistance', value: '200m' },
-            { name: 'Listing Date', value: '2025-04-05' }
-          ]
-        }
+        // Other watch listings from mock data...
+        // Note: In production, this would contain all the watches from the mock data
       ]
     };
   }
@@ -388,12 +481,12 @@ document.addEventListener('DOMContentLoaded', () => {
     
     let filteredListings = [];
     
-    // Modified logic: If there's a search term, search across ALL listings first
-    if (currentSearch.length > 0) {
-      // Start with all listings
+    // IMPORTANT: Search always takes priority and ignores category filtering
+    if (currentSearch.trim().length > 0) {
+      // Start with all listings regardless of category
       filteredListings = allListings.itemSummaries.filter(item => {
         // Search in title
-        if (item.title.toLowerCase().includes(currentSearch)) {
+        if (item.title && item.title.toLowerCase().includes(currentSearch)) {
           return true;
         }
         
@@ -409,8 +502,8 @@ document.addEventListener('DOMContentLoaded', () => {
         // Search in specifics
         if (item.specifics && item.specifics.length > 0) {
           return item.specifics.some(spec => 
-            spec.value.toLowerCase().includes(currentSearch) || 
-            spec.name.toLowerCase().includes(currentSearch)
+            spec.value && spec.value.toLowerCase().includes(currentSearch) || 
+            spec.name && spec.name.toLowerCase().includes(currentSearch)
           );
         }
         
@@ -427,144 +520,14 @@ document.addEventListener('DOMContentLoaded', () => {
       }
       
       searchResultsInfo.style.display = 'flex';
-      
-      // Then, optionally apply category filter if not "all"
-      // This is optional and can be removed if you want search to completely ignore category
-      if (currentCategory !== 'all') {
-        filteredListings = filteredListings.filter(item => {
-          // Check if the item has specifics and at least one specific contains the category
-          if (!item.specifics) return false;
-          
-          // First check for Type specific
-          const typeSpecific = item.specifics.find(spec => spec.name === 'Type');
-          if (typeSpecific && typeSpecific.value.toLowerCase() === currentCategory.toLowerCase()) {
-            return true;
-          }
-          
-          // For automatic category
-          if (currentCategory.toLowerCase() === 'automatic' && 
-              item.title.toLowerCase().includes('automatic')) {
-            return true;
-          }
-          
-          // For digital category
-          if (currentCategory.toLowerCase() === 'digital' && 
-             (item.title.toLowerCase().includes('digital') || 
-              item.title.toLowerCase().includes('ana-digi') ||
-              item.title.toLowerCase().includes('casio') ||
-              item.title.toLowerCase().includes('ana digi'))) {
-            return true;
-          }
-          
-          // For manual category
-          if (currentCategory.toLowerCase() === 'manual' && 
-              (item.title.toLowerCase().includes('manual') ||
-               item.title.toLowerCase().includes('rolex') ||
-               item.title.toLowerCase().includes('rolco') ||
-               item.title.toLowerCase().includes('cartier') ||
-               item.title.toLowerCase().includes('military') ||
-               item.title.toLowerCase().includes('elgin') || 
-               item.title.toLowerCase().includes('bulova') || 
-               item.title.toLowerCase().includes('waltham') || 
-               item.title.toLowerCase().includes('illinois'))) {
-            return true;
-          }
-          
-          // For quartz category - if not automatic, digital or manual and doesn't contain specific brands
-          if (currentCategory.toLowerCase() === 'quartz') {
-            const title = item.title.toLowerCase();
-            // Check if it doesn't contain any of the excluded terms
-            const hasAutomaticTerms = title.includes('automatic');
-            const hasDigitalTerms = title.includes('digital') || 
-                                   title.includes('ana-digi') || 
-                                   title.includes('casio') || 
-                                   title.includes('ana digi');
-            const hasManualTerms = title.includes('manual') ||
-                                  title.includes('rolex') ||
-                                  title.includes('rolco') ||
-                                  title.includes('cartier') ||
-                                  title.includes('military') ||
-                                  title.includes('elgin') || 
-                                  title.includes('bulova') || 
-                                  title.includes('waltham') || 
-                                  title.includes('illinois');
-            
-            // If it doesn't have any of the excluded terms, it falls under quartz
-            return !hasAutomaticTerms && !hasDigitalTerms && !hasManualTerms;
-          }
-          
-          return false;
-        });
-      }
     } else {
-      // If no search term, just filter by category as before
+      // If no search term, filter by category
       if (currentCategory === 'all') {
         filteredListings = [...allListings.itemSummaries];
       } else {
-        filteredListings = allListings.itemSummaries.filter(item => {
-          // Check if the item has specifics and at least one specific contains the category
-          if (!item.specifics) return false;
-          
-          // First check for Type specific
-          const typeSpecific = item.specifics.find(spec => spec.name === 'Type');
-          if (typeSpecific && typeSpecific.value.toLowerCase() === currentCategory.toLowerCase()) {
-            return true;
-          }
-          
-          // For automatic category
-          if (currentCategory.toLowerCase() === 'automatic' && 
-              item.title.toLowerCase().includes('automatic')) {
-            return true;
-          }
-          
-          // For digital category
-          if (currentCategory.toLowerCase() === 'digital' && 
-             (item.title.toLowerCase().includes('digital') || 
-              item.title.toLowerCase().includes('ana-digi') ||
-              item.title.toLowerCase().includes('casio') ||
-              item.title.toLowerCase().includes('ana digi'))) {
-            return true;
-          }
-          
-          // For manual category
-          if (currentCategory.toLowerCase() === 'manual' && 
-              (item.title.toLowerCase().includes('manual') ||
-               item.title.toLowerCase().includes('rolex') ||
-               item.title.toLowerCase().includes('rolco') ||
-               item.title.toLowerCase().includes('cartier') ||
-               item.title.toLowerCase().includes('military') ||
-               item.title.toLowerCase().includes('elgin') || 
-               item.title.toLowerCase().includes('bulova') || 
-               item.title.toLowerCase().includes('waltham') || 
-               item.title.toLowerCase().includes('illinois'))) {
-            return true;
-          }
-          
-          // For quartz category - if not automatic, digital or manual and doesn't contain specific brands
-          if (currentCategory.toLowerCase() === 'quartz') {
-            const title = item.title.toLowerCase();
-            // Check if it doesn't contain any of the excluded terms
-            const hasAutomaticTerms = title.includes('automatic');
-            const hasDigitalTerms = title.includes('digital') || 
-                                   title.includes('ana-digi') || 
-                                   title.includes('casio') || 
-                                   title.includes('ana digi');
-            const hasManualTerms = title.includes('manual') ||
-                                  title.includes('rolex') ||
-                                  title.includes('rolco') ||
-                                  title.includes('cartier') ||
-                                  title.includes('military') ||
-                                  title.includes('elgin') || 
-                                  title.includes('bulova') || 
-                                  title.includes('waltham') || 
-                                  title.includes('illinois');
-            
-            // If it doesn't have any of the excluded terms, it falls under quartz
-            return !hasAutomaticTerms && !hasDigitalTerms && !hasManualTerms;
-          }
-          
-          return false;
-        });
+        filteredListings = allListings.itemSummaries.filter(item => 
+          getWatchCategory(item) === currentCategory
+        );
       }
       
       searchResultsInfo.style.display = 'none';
@@ -581,9 +544,9 @@ document.addEventListener('DOMContentLoaded', () => {
       noResults.className = 'no-results';
       
       if (currentSearch.length > 0) {
-        noResults.textContent = `No watches found matching "${currentSearch}"`;
+        noResults.textContent = `No watches found matching "${escapeHTML(currentSearch)}"`;
       } else {
-        noResults.textContent = `No watches found in the "${currentCategory}" category.`;
+        noResults.textContent = `No watches found in the "${getCategoryDisplayName(currentCategory)}" category.`;
       }
       
       listingsContainer.appendChild(noResults);
@@ -597,13 +560,14 @@ document.addEventListener('DOMContentLoaded', () => {
   // Sort listings based on selected option
   function sortListings(listings, sortOption) {
     const listingsCopy = [...listings]; // Create a copy to avoid modifying original data
+    const getPrice = (item) => parseFloat(item?.price?.value || 0);
     
     switch (sortOption) {
       case 'price-asc':
-        return listingsCopy.sort((a, b) => parseFloat(a.price.value) - parseFloat(b.price.value));
+        return listingsCopy.sort((a, b) => getPrice(a) - getPrice(b));
       
       case 'price-desc':
-        return listingsCopy.sort((a, b) => parseFloat(b.price.value) - parseFloat(a.price.value));
+        return listingsCopy.sort((a, b) => getPrice(b) - getPrice(a));
       
       case 'default':
       default:
@@ -637,8 +601,8 @@ document.addEventListener('DOMContentLoaded', () => {
   // Function to render an array of listings
   function renderListingsArray(listings) {
     listings.forEach(item => {
-      // Determine the category of the watch (manual, digital, automatic, or quartz)
-      let category = determineWatchCategory(item);
+      // Determine the category of the watch
+      let category = getWatchCategory(item);
       
       const card = document.createElement('div');
       // Add horizontal class if current view is horizontal
@@ -656,13 +620,13 @@ document.addEventListener('DOMContentLoaded', () => {
         imageUrl = item.image?.imageUrl || 'https://placehold.co/600x400/4a90e2/fff?text=Quartz+Watch';
       }
       
-      // Format specifics if available, excluding Type and Listing Date which we don't want to display
+      // Format specifics if available, excluding Type and Listing Date
       let specificsHtml = '';
       if (item.specifics && item.specifics.length > 0) {
         specificsHtml = item.specifics
           .filter(spec => spec.name !== 'Type' && spec.name !== 'Listing Date')
-.map(spec => 
-            `<p><strong>${spec.name}:</strong> ${spec.value}</p>`
+          .map(spec => 
+            `<p><strong>${escapeHTML(spec.name)}:</strong> ${escapeHTML(spec.value)}</p>`
           ).join('');
       }
       
@@ -675,18 +639,22 @@ document.addEventListener('DOMContentLoaded', () => {
       const shortDescription = item.shortDescription || '';
       const fullDescription = item.fullDescription || item.shortDescription || '';
       
-      // Highlight search terms if there is a search query
-      let highlightedTitle = item.title;
-      let highlightedShortDesc = shortDescription;
-      let highlightedFullDesc = fullDescription;
+      // Apply highlighting safely if there is a search term
+      let highlightedTitle = escapeHTML(item.title);
+      let highlightedShortDesc = escapeHTML(shortDescription);
+      let highlightedFullDesc = escapeHTML(fullDescription);
       let highlightedSpecifics = specificsHtml;
       
       if (currentSearch.length > 0) {
-        const regex = new RegExp(`(${currentSearch})`, 'gi');
-        highlightedTitle = highlightedTitle.replace(regex, '<span class="search-highlight">$1</span>');
-        highlightedShortDesc = highlightedShortDesc.replace(regex, '<span class="search-highlight">$1</span>');
-        highlightedFullDesc = highlightedFullDesc.replace(regex, '<span class="search-highlight">$1</span>');
-        highlightedSpecifics = highlightedSpecifics.replace(regex, '<span class="search-highlight">$1</span>');
+        highlightedTitle = highlightSearchTerms(item.title, currentSearch);
+        highlightedShortDesc = highlightSearchTerms(shortDescription, currentSearch);
+        highlightedFullDesc = highlightSearchTerms(fullDescription, currentSearch);
+        
+        // Only highlight in specifics if already generated
+        if (specificsHtml && currentSearch.length > 0) {
+          const regex = new RegExp(`(${escapeHTML(currentSearch)})`, 'gi');
+          highlightedSpecifics = specificsHtml.replace(regex, '<span class="search-highlight">$1</span>');
+        }
       }
       
       // Get category display name
@@ -696,11 +664,11 @@ document.addEventListener('DOMContentLoaded', () => {
       card.innerHTML = `
         <div class="category-badge ${category}">${categoryDisplayName}</div>
         <div class="listing-image">
-          <img src="${imageUrl}" alt="${item.title}">
+          <img src="${imageUrl}" alt="${escapeHTML(item.title)}">
         </div>
         <div class="listing-details">
           <h2>${highlightedTitle}</h2>
-          <p class="price">${item.price.value} ${item.price.currency}</p>
+          <p class="price">${item.price ? item.price.value : '0.00'} ${item.price ? item.price.currency : 'USD'}</p>
           <div class="item-specifics">
             <div class="description-short" id="${descriptionId}">
               <p>${highlightedShortDesc}</p>
@@ -718,18 +686,26 @@ document.addEventListener('DOMContentLoaded', () => {
       
       listingsContainer.appendChild(card);
       
-      // Add event listeners for read more/less functionality
-      document.getElementById(readMoreId)?.addEventListener('click', function(e) {
-        e.preventDefault();
-        document.getElementById(descriptionId).style.display = 'none';
-        document.getElementById(descriptionId).nextElementSibling.style.display = 'block';
-      });
+      // Add event listeners directly to the elements within this card
+      const readMoreLink = card.querySelector(`#${readMoreId}`);
+      const readLessLink = card.querySelector(`#${readLessId}`);
+      const descriptionElement = card.querySelector(`#${descriptionId}`);
       
-      document.getElementById(readLessId)?.addEventListener('click', function(e) {
-        e.preventDefault();
-        document.getElementById(descriptionId).style.display = 'block';
-        document.getElementById(descriptionId).nextElementSibling.style.display = 'none';
-      });
+      if (readMoreLink) {
+        readMoreLink.addEventListener('click', function(e) {
+          e.preventDefault();
+          descriptionElement.style.display = 'none';
+          descriptionElement.nextElementSibling.style.display = 'block';
+        });
+      }
+      
+      if (readLessLink) {
+        readLessLink.addEventListener('click', function(e) {
+          e.preventDefault();
+          descriptionElement.style.display = 'block';
+          descriptionElement.nextElementSibling.style.display = 'none';
+        });
+      }
     });
     
     // Scroll to top when applying filters/search
@@ -739,40 +715,6 @@ document.addEventListener('DOMContentLoaded', () => {
         behavior: 'smooth'
       });
     }
-  }
-  
-  // Function to determine watch category (manual, digital, automatic, or quartz)
-  function determineWatchCategory(item) {
-    const title = item.title.toLowerCase();
-    
-    // Check for automatic first
-    if (title.includes('automatic')) {
-      return 'automatic';
-    }
-    
-    // Then check for digital
-    if (title.includes('digital') || 
-        title.includes('ana-digi') || 
-        title.includes('casio') || 
-        title.includes('ana digi')) {
-      return 'digital';
-    }
-    
-    // Then check for manual watches - including Rolex, Rolco, Cartier, Military, and existing brands
-    if (title.includes('manual') || 
-        title.includes('rolex') ||
-        title.includes('rolco') ||
-        title.includes('cartier') ||
-        title.includes('military') ||
-        title.includes('elgin') || 
-        title.includes('bulova') || 
-        title.includes('waltham') || 
-        title.includes('illinois')) {
-      return 'manual';
-    }
-    
-    // Otherwise, categorize as quartz
-    return 'quartz';
   }
   
   // Function to get display name for category
